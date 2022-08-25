@@ -15,6 +15,11 @@ Simulate the dynamics of a single tensegrity under a sudden external load.
 Plot the forces in the system and animate the process
 """
 
+
+# Type of simulation: "InitialMomentum" adds a momentum to the end nodes of the structure
+#                     "ConstantForceWorldFrame" exerts an external force at the end nodes
+simType = "ConstantForceWorldFrame"
+
 # Setup tensegrity
 param = design_param()
 tensegrity = tensegrity_design(param)
@@ -27,34 +32,58 @@ rods = tensegrity.rods
 numRod = tensegrity.numRod
 strings = tensegrity.strings
 numString = tensegrity.numString
+massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.001 # [s] Simulation time
-tF = tf # [s] Duration of collision
+tf = 0.02 
+# [s] Simulation time
 t_span = (t0,tf)
 
 P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
-# Rotate the whole tensegrity
+# Rotate the whole tensegrity 90 degrees
 tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,0,0])
 rotatedPos = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     rotatedPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().T
 P0[:nodeNum*dim] = rotatedPos.reshape((nodeNum*dim,))
 
-theta = np.pi/4 #[rad] angle of collision
-hitForce = 10 #[N]
 
-extF = np.zeros((nodeNum,dim))
-F = hitForce/2*np.array([np.cos(theta),0,np.sin(theta)])
-extF[4]+=F
-extF[6]+=F
+if simType == "InitialMoment":
+    # Add initial impulse: 
+    impactForce = 1 #[N]
+    impactTime = 0.01 #[s]
+    impactNodes = [4,6]
+    theta = np.pi/4
+    impactDir = np.array([np.cos(theta),0,np.sin(theta)])
+    initVel = np.zeros((nodeNum,dim))
+    for node in impactNodes:
+        vel = (impactForce/2*impactTime)/massList[node]
+        initVel[node] = vel*impactDir
+    P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
-# Define and solve ODE
-print("Start Simulation")
-tensegrity_ODE =tensegrity_ode(tensegrity)
-sol = solve_ivp(tensegrity_ODE.ode_ivp_hit_force, t_span, P0, method='Radau', args = (extF, tF))
-print("Finish Simulation")
+    # Define and solve ODE
+    print("SimType:"+simType)
+    print("Start Simulation")
+    tensegrity_ODE =tensegrity_ode(tensegrity)
+    sol = solve_ivp(tensegrity_ODE.ode_ivp, t_span, P0, method='Radau')
+    print("Finish Simulation")
+
+elif simType == "ConstantForceWorldFrame":
+    theta = np.pi/4 #[rad] angle of collision
+    hitForce = 50 #[N]
+    extF = np.zeros((nodeNum,dim))
+    F = hitForce/2*np.array([np.cos(theta),0,np.sin(theta)])
+    extF[4]+=F
+    extF[6]+=F
+
+    # Define and solve ODE
+    print("SimType:"+simType)
+    print("Start Simulation")
+    tensegrity_ODE =tensegrity_ode(tensegrity)
+    sol = solve_ivp(tensegrity_ODE.ode_ivp_hit_force, t_span, P0, method='Radau',args=(extF,tf))
+    print("Finish Simulation")
+
 
 # Analyze the ODE result
 print("Recording Results")

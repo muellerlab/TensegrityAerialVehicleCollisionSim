@@ -53,41 +53,34 @@ class tensegrity_ode():
         cross012 = e01.cross(e12)
         norm012 = cross012.norm2()
 
-        if norm012 < 1e-10:
+        if norm012 < 1e-12:
             # If two rods are parallel. No rotation axis can be determined. 
             # We overwrite it with zero-vector so corresponding torque will be zero
             rotAxis012 = Vec3(0,0,0) 
         else:
             rotAxis012 = cross012/norm012
-        
-        rotAxis210 = - rotAxis012 # axis that rotates e21 to e10 
         cosTheta = e01.dot(e12)
-
         if cosTheta < -(1-1e-12):
-            cosTheta = -(1-1e-12)
+            theta = np.pi
         elif cosTheta > (1-1e-12):
-            cosTheta = (1-1e-12)
+            theta = 0
+        else:
+            theta = np.arccos(cosTheta)
 
-        theta = np.arccos(cosTheta)
-        
         v01 = Vec3(vels[joint[0]] - vels[joint[1]])
-        v0_tan_dir = rotAxis210.cross(-e01) # positive tangential direction for node 0 to increase bending angle
+        v0_tan_dir = -rotAxis012.cross(-e01) # when two rods are parallel, this vector is zero. Otherwise, it cross product of two uniform vector perpendicular to each other
         omega0 = v01.dot(v0_tan_dir)/l01 # angular rate due to rotation of 0-1 rod
-
         v21 = Vec3(vels[joint[2]] - vels[joint[1]])
         v2_tan_dir = rotAxis012.cross(e12) # positive tangential direction for node 2 to increase bending angle
         omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
-
+        
         M_spring = theta*self.kJointList[jointID]
-        M_damping = (omega0+omega2)*self.dJoint
-        M = M_spring + M_damping
+        M_damping = (omega0 + omega2)*self.dJoint
 
-        F2 = ((M/l12)*(-rotAxis012.cross(e12))).to_array().squeeze()
-        F0 = ((M/l01)*(-rotAxis210.cross(-e01))).to_array().squeeze()
+        F0 = (((M_spring+M_damping)/l01)*-v0_tan_dir).to_array().squeeze()
+        F2 = (((M_spring+M_damping)/l12)*-v2_tan_dir).to_array().squeeze()
         F1 = -(F0 + F2) 
         return [F0, F1, F2]
-
-    # ODEs of tensegrity node 
 
     def compute_internal_forces(self, P, sepReturn = False):
         # Compute the internal elastic and damping forces of the tensegrity system 
@@ -164,28 +157,10 @@ class tensegrity_ode():
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
 
-# def compute_hit_force_on_rod_end(nodePos, nodeVel, node, extF):
-#     """
-#     Given positions and velocity of all nodes, 
-#     Compute sum of external forces and string force exerted at the given node. 
-#     We use this to study if tensegrity help prevent bending stress concentration due to tangential forces. 
-#     """
-#     F = np.zeros(dim) # linear spring force   
-#     for s in strings:
-#         if node in s:
-#             # direction of cable:
-#             e = nodePos[s[0]] - nodePos[s[1]]
-#             if s[0] == node:
-#                 e = -e #get the sign right
-#                 vaE = nodeVel[s[0]]
-#                 vbE = nodeVel[s[1]]
-#             else:
-#                 vaE = nodeVel[s[1]]
-#                 vbE = nodeVel[s[0]]
-#             l = np.linalg.norm(e) #current length
-#             vab = vaE - vbE
-#             if l > sL0:  # only tensile
-#                 F += kString*(l-sL0)*e/l
-#     F += extF[node]
-
-#     return F
+    def ode_ivp(self, t, P):
+        dPdt = np.zeros_like(P)
+        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
+        forces = self.compute_internal_forces(P)
+        for i in range(self.nodeNum):
+            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
+        return dPdt 

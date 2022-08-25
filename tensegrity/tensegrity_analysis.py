@@ -57,33 +57,28 @@ class tensegrity_analysis():
                 rotAxis012 = Vec3(0,0,0) 
             else:
                 rotAxis012 = cross012/norm012
-            
-            rotAxis210 = - rotAxis012 # axis that rotates e21 to e10 
             cosTheta = e01.dot(e12)
-
             if cosTheta < -(1-1e-12):
-                cosTheta = -(1-1e-12)
+                theta = np.pi
             elif cosTheta > (1-1e-12):
-                cosTheta = (1-1e-12)
+                theta = 0
+            else:
+                theta = np.arccos(cosTheta)
 
-            theta = np.arccos(cosTheta)
-            
             v01 = Vec3(vels[joint[0]] - vels[joint[1]])
-            v0_tan_dir = rotAxis210.cross(-e01) # positive tangential direction for node 0 to increase bending angle
+            v0_tan_dir = -rotAxis012.cross(-e01) # when two rods are parallel, this vector is zero. Otherwise, it cross product of two uniform vector perpendicular to each other
             omega0 = v01.dot(v0_tan_dir)/l01 # angular rate due to rotation of 0-1 rod
-
             v21 = Vec3(vels[joint[2]] - vels[joint[1]])
             v2_tan_dir = rotAxis012.cross(e12) # positive tangential direction for node 2 to increase bending angle
             omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
-
+            
             M_spring = theta*self.kJointList[jointID]
-            M_damping = (omega0+omega2)*self.dJoint
-            M = M_spring + M_damping
+            M_damping = (omega0 + omega2)*self.dJoint
 
             jointInfo[jointID, 0] = theta 
             jointInfo[jointID, 1] = omega0+omega2 
             jointInfo[jointID, 2] = M_spring 
-            jointInfo[jointID, 3] = M_damping 
+            jointInfo[jointID, 3] = M_damping
             jointInfo[jointID, 4] = theta*self.kJointStressList[jointID] # stress due to bending at the joint
         return jointInfo
 

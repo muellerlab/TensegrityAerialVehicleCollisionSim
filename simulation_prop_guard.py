@@ -12,6 +12,10 @@ from scipy.integrate import odeint, solve_ivp
 import seaborn as sns
 sns.set_theme()
 
+# Type of simulation: "initialMomentum" adds a momentum to the end nodes of the structure
+#                     "constantForce" exerts an external force at the end nodes
+simType = "constantForce"
+
 # Create the prop-guard design
 param = design_param()
 prop_guard = prop_guard_design(param)
@@ -21,14 +25,12 @@ nodeNum = prop_guard.nodeNum
 dim = prop_guard.dim
 joints = prop_guard.joints
 links = prop_guard.links
+massList = prop_guard.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.05 # [s] Simulation time
-tF = tf # [s] Duration of collision
+tf = 0.005 # [s] Simulation time
 t_span = (t0,tf)
-theta = np.pi/4 #[rad] angle of collision
-hitForce = 20 #[N]
 
 # Rotate the whole tensegrity
 P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
@@ -38,18 +40,39 @@ for i in range(nodeNum):
     rotatedPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 P0[:nodeNum*dim] = rotatedPos.reshape((nodeNum*dim,))
 
-# Define external collision force
-extF = np.zeros((nodeNum,dim))
-F = hitForce/2 * np.array([np.cos(theta), 0, np.sin(theta)]) 
-extF[0] += F
-extF[8] += F
+if simType == "initialMoment":
+    # Add initial impulse: 
+    impactForce = 1 #[N]
+    impactTime = 0.01 #[s]
+    impactNodes = [0,8]
+    theta = np.pi/4
+    impactDir = np.array([np.cos(theta),0,np.sin(theta)])
+    initVel = np.zeros((nodeNum,dim))
+    for node in impactNodes:
+        vel = (impactForce/2*impactTime)/massList[node]
+        initVel[node] = vel*impactDir
+    P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
-# Define and solve ODE
-print("Start Simulation")
-prop_guard_ODE =prop_guard_ode(prop_guard)
-sol = solve_ivp(prop_guard_ODE.ode_ivp_hit_force, t_span, P0, method='Radau', args = (extF, tF))
-print("Finish Simulation")
+    # Define and solve ODE
+    print("Start Simulation")
+    prop_guard_ODE =prop_guard_ode(prop_guard)
+    sol = solve_ivp(prop_guard_ODE.ode_ivp, t_span, P0, method='Radau')
+    print("Finish Simulation")
 
+elif simType == "constantForce":
+    theta = np.pi/4 #[rad] angle of collision
+    hitForce = 100 #[N]
+    extF = np.zeros((nodeNum,dim))
+    F = hitForce/2*np.array([np.cos(theta),0,np.sin(theta)])
+    extF[0]+=F
+    extF[8]+=F
+
+    # Define and solve ODE
+    print("SimType:"+simType)
+    print("Start Simulation")
+    prop_guard_ODE =prop_guard_ode(prop_guard)
+    sol = solve_ivp(prop_guard_ODE.ode_ivp_hit_force, t_span, P0, method='Radau',args=(extF,tf))
+    print("Finish Simulation")
 
 # Analyze the ODE result
 print("Recording Results")
