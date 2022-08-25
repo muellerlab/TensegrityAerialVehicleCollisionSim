@@ -68,6 +68,9 @@ class prop_guard_design():
             [5,6,2],
             [6,2,7],
             [2,7,8]]
+
+        self.dRod = self.param.dRod
+        self.dJoint = self.param.dJoint
         pass
     
     def get_pos_from_comparable_tensegrity(self,propPos):
