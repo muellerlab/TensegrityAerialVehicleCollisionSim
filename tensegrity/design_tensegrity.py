@@ -21,6 +21,10 @@ class tensegrity_design():
         
         self.param = param
         self.propR = param.propR
+        self.dRod = param.dRod
+        self.dString = param.dString
+        self.dJoint = param.dJoint
+
         # 12 tensegrity nodes + 4 mass nodes representing quadcopter weight
         unitTensegrityNodes = np.array([
             # Tensegrity node
@@ -200,8 +204,8 @@ class tensegrity_design():
             rPreT = self.param.sPreT * stressRatio # [N] rod pre-compression force
 
             root = fsolve(self.funcRod, [rM/(self.param.rRho*6*rLPreSS), rLPreSS], args=(rM, self.param.rRho, rLPreSS, self.param.rE, rPreT))
-            rA = root[0] # cross sectional area
-            rR = np.sqrt(rA/np.pi) #[m] diameter of rod
+            self.rA = root[0] # cross sectional area
+            rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
             self.rL = root[1] # no-stress string length
             rPreStrain = (self.rL-rLPreSS)/self.rL
 
@@ -214,8 +218,8 @@ class tensegrity_design():
             rPreT = self.param.sPreT * stressRatio # [N] rod pre-compression force
             
             root = fsolve(self.funcRod, [rM/(self.param.rRho*6*rLPreSS), rLPreSS], args=(rM, self.param.rRho, rLPreSS, self.param.rE, rPreT))
-            rA = root[0] # cross sectional area
-            rR = np.sqrt(rA/np.pi) #[m] diameter of rod
+            self.rA = root[0] # cross sectional area
+            rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
             self.rL = root[1] # no-stress string length
             rPreStrain = (self.rL-rLPreSS)/self.rL
 
@@ -232,7 +236,7 @@ class tensegrity_design():
             b = self.rods[i][0]
             e = self.rods[i][1]
             self.rodLength0List[i] = np.linalg.norm(compressedNodePos[b] - compressedNodePos[e])/(1-rPreStrain)
-            self.kRodList[i] = self.param.rE*rA/self.rodLength0List[i]
+            self.kRodList[i] = self.param.rE*self.rA/self.rodLength0List[i]
 
         self.kJointList = np.zeros(len(self.joints))
         self.kJointStressList = np.zeros(len(self.joints))
