@@ -11,11 +11,17 @@ import seaborn as sns
 sns.set_theme()
 
 # Setup tensegrity
-param = design_param()
+param = design_param() #Load structure & material parameter 
 tensegrity = tensegrity_design(param)
-tensegrity.design_from_propeller()
-nodeNum = tensegrity.nodeNum
 
+rL0 = 225/1000 #rod length
+rOR = 4/1000 #outer diameter
+rIR = 3/1000 #inner diameter
+propOffSet = param.propR
+sA = np.pi*(5e-4)**2 # String area
+tensegrity.design_from_rod(rL0, rOR, propOffSet, sA, rIR)
+
+nodeNum = tensegrity.nodeNum
 dim = tensegrity.dim
 joints = tensegrity.joints
 rods = tensegrity.rods
@@ -26,15 +32,14 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.1
+tf = 0.05
 # [s] Simulation time
 t_span = (t0,tf)
-speed = 5
-
+speed = 6 # speed of collision
 
 P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
-# Rotate the whole tensegrity 90 degrees
-tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,-np.pi/8,0])
+# Rotate the whole tensegrity
+tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,0,-np.pi/8])
 rotatedPos = np.zeros_like(tensegrity.nodePos)
 initVel = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
@@ -45,15 +50,14 @@ P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
 # Setup wall 
 nWall = Vec3(1,0,0)
-kWall = 1e6
-pWall = Vec3(-(tensegrity.rL/2+1e-2),0,0)
+kWall = 4000 #Based on the example of concrete analysis in paper "What is the stiffness of reinforced concrete walls" by RC and Bull
+pWall = Vec3(np.min(rotatedPos[:,0]),0,0) #Set the wall so that contact starts right at time 0
 
 print("Simulation type: wall collision")
 print("Begin Simulation")
 tensegrity_ODE =tensegrity_ode(tensegrity)
 sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall))
 print("Finish Simulation")
-
 # Analyze the ODE result
 print("Recording Results")
 tensegrity_helper = tensegrity_analysis(tensegrity_ODE)

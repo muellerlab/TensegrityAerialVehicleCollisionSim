@@ -67,7 +67,7 @@ for i in range(nodeNum_p):
     rotatedPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 P_p[:nodeNum_p*dim_p] = rotatedPos.reshape((nodeNum_p*dim_p,))
 
-sectionNum = 4
+sectionNum = 50
 
 theta0 = np.linspace(-np.pi/2, np.pi/2, sectionNum)
 theta1 = np.linspace(-np.pi/2, np.pi/2, sectionNum)

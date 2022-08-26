@@ -180,8 +180,10 @@ class tensegrity_design():
         n2 = self.unitNodePos[2,:]
         rodLength = fsolve(self.propDistConstrAsymmetric, np.array([0.2]), args=(n0, n1, n2, unitPropX))[0]
         return rodLength
+    
     """
     Design tensegrity based on propeller size. 
+    Find the tensegrity with minimum size that can fully enclose the propeller. 
     """
     def design_from_propeller(self):
         stressRatio = self.findPretensionRatio(self.unitNodePos, self.fullRods, self.strings)
@@ -259,3 +261,58 @@ class tensegrity_design():
         self.propPos = compressedPropPos
         self.rLPreSS = rLPreSS
         self.sLPreSS = sLPreSS
+    
+
+    """
+    Design tensegrity based on rod size used to design tensegrity.
+    Indicate propeller's position with propOffSet parameter
+    rOR: outter radius. 
+    rIR: inner radius, zero for solid rod, non zero for tubes. 
+    """
+    def design_from_rod(self, rL0, rOR, propOffSet, sA, rIR = 0):
+
+        stressRatio = self.findPretensionRatio(self.unitNodePos, self.fullRods, self.strings)
+
+        self.rL = rL0
+        self.rA = np.pi*(rOR**2-rIR**2)
+        rPreT = self.param.sPreT * stressRatio # [N] rod pre-compression force
+        rPreStrain = (rPreT/self.rA)/self.param.rE
+        rLPreSS = self.rL*(1-rPreStrain)
+        self.rR = rOR
+
+        compressedPropPos = np.array([
+        [-0.25*rLPreSS, -propOffSet, 0.0],
+        [-0.25*rLPreSS, propOffSet, 0.0],
+        [0.25*rLPreSS, -propOffSet, 0.0],
+        [0.25*rLPreSS, propOffSet, 0.0]])
+        compressedNodePos = np.vstack((rLPreSS*self.unitNodePos, compressedPropPos))
+
+        self.rodLength0List = np.zeros(self.numRod) # list of rod length under zero stress
+        self.kRodList = np.zeros(self.numRod) # list of stiffness of rods
+        for i in range(self.numRod):
+            b = self.rods[i][0]
+            e = self.rods[i][1]
+            self.rodLength0List[i] = np.linalg.norm(compressedNodePos[b] - compressedNodePos[e])/(1-rPreStrain)
+            self.kRodList[i] = self.param.rE*self.rA/self.rodLength0List[i]
+
+        self.kJointList = np.zeros(len(self.joints))
+        self.kJointStressList = np.zeros(len(self.joints))
+        for i in range(len(self.joints)):
+            [b,m,e] = self.joints[i]
+            jointLength = (np.linalg.norm(compressedNodePos[b] - compressedNodePos[m]) +  np.linalg.norm(compressedNodePos[m] - compressedNodePos[e]))/(1-rPreStrain)
+            jointI = (rOR**4-rIR**4)*np.pi/4  #Second moment of area, assume cross sectional area is a circle
+            self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
+            self.kJointStressList[i] = self.kJointList[i]*rOR/jointI # stress = Moment*r/I
+
+        # length ratio between string and rod in a self-stressed tensegrity
+        gamma_l = np.linalg.norm(self.unitNodePos[self.strings[0][0]]-self.unitNodePos[self.strings[0][1]])/np.linalg.norm(self.unitNodePos[self.fullRods[0][0]]-self.unitNodePos[self.fullRods[0][1]]) 
+        sLPreSS = rLPreSS * gamma_l # length of string under pre-tension
+        sPreStrain = (self.param.sPreT /sA)/self.param.sE
+        self.sL0 = sLPreSS/(1+sPreStrain)
+        
+        self.kString = self.param.sE*sA/self.sL0
+        self.nodePos = compressedNodePos 
+        self.propPos = compressedPropPos
+        self.rLPreSS = rLPreSS
+        self.sLPreSS = sLPreSS
+        return 
