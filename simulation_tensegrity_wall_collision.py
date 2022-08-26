@@ -10,16 +10,6 @@ from scipy.integrate import solve_ivp
 import seaborn as sns
 sns.set_theme()
 
-"""
-Simulate the dynamics of a single tensegrity under a sudden external load.
-Plot the forces in the system and animate the process
-Type of simulation: 
-"InitialMomentum" adds a momentum to the end nodes of the structure
-"ConstantForceWorldFrame" exerts constant world frame forces at the end nodes 
-"ConstantForceBodyFrame" exerts constant body frame external force at the end nodes
-"""
-simType = "ConstantForceBodyFrame"
-
 # Setup tensegrity
 param = design_param()
 tensegrity = tensegrity_design(param)
@@ -36,65 +26,33 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.01 
+tf = 0.1
 # [s] Simulation time
 t_span = (t0,tf)
+speed = 5
+
 
 P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
 # Rotate the whole tensegrity 90 degrees
-tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,0,0])
+tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,-np.pi/8,0])
 rotatedPos = np.zeros_like(tensegrity.nodePos)
+initVel = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     rotatedPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().T
+    initVel[i] = speed*Vec3(-1,0,0).to_array().squeeze()
 P0[:nodeNum*dim] = rotatedPos.reshape((nodeNum*dim,))
+P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
+# Setup wall 
+nWall = Vec3(1,0,0)
+kWall = 1e6
+pWall = Vec3(-(tensegrity.rL/2+1e-2),0,0)
 
-if simType == "InitialMoment":
-    # Add initial impulse: 
-    impactForce = 1 #[N]
-    impactTime = 0.01 #[s]
-    impactNodes = [4,6]
-    theta = np.pi/4
-    impactDir = np.array([np.cos(theta),0,np.sin(theta)])
-    initVel = np.zeros((nodeNum,dim))
-    for node in impactNodes:
-        vel = (impactForce/2*impactTime)/massList[node]
-        initVel[node] = vel*impactDir
-    P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
-
-    # Define and solve ODE
-    print("SimType:"+simType)
-    print("Start Simulation")
-    tensegrity_ODE =tensegrity_ode(tensegrity)
-    sol = solve_ivp(tensegrity_ODE.ode_ivp, t_span, P0, method='Radau')
-    print("Finish Simulation")
-
-elif simType == "ConstantForceWorldFrame":
-    theta = np.pi/4 #[rad] angle of collision
-    hitForce = 100 #[N]
-    extF = np.zeros((nodeNum,dim))
-    F = hitForce/2*np.array([np.cos(theta),0,np.sin(theta)])
-    extF[4]+=F
-    extF[6]+=F
-
-    # Define and solve ODE
-    print("SimType:"+simType)
-    print("Start Simulation")
-    tensegrity_ODE =tensegrity_ode(tensegrity)
-    sol = solve_ivp(tensegrity_ODE.ode_ivp_hit_force, t_span, P0, method='Radau',args=(extF,tf))
-    print("Finish Simulation")
-
-elif simType == "ConstantForceBodyFrame":
-    azimuth = 0
-    elevation = np.pi/4 
-    rot = Rotation.from_euler_YPR([azimuth,-elevation,0])
-    totalF = 100 #[N]
-    # Define and solve ODE
-    print("SimType:"+simType)
-    print("Start Simulation")
-    tensegrity_ODE =tensegrity_ode(tensegrity)
-    sol = solve_ivp(tensegrity_ODE.ode_ivp_force_body_frame, t_span, P0, method='Radau',args=(totalF,rot))
-    print("Finish Simulation")
+print("Simulation type: wall collision")
+print("Begin Simulation")
+tensegrity_ODE =tensegrity_ode(tensegrity)
+sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall))
+print("Finish Simulation")
 
 # Analyze the ODE result
 print("Recording Results")

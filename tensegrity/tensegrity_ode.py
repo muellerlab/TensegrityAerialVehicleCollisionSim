@@ -183,3 +183,28 @@ class tensegrity_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
+
+    def ode_ivp_wall(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        nWall: a normal vector pointing out of the wal
+        pWall: a point on the wall surface
+        kWall: Hooke's constant of the wall
+        wallX: x coordinate of the wall surface. Any point with pos.x < wallX is in the wall
+        kWall: Hooke's coefficient of the wall 
+
+        Assume the wall is a very stiff spring.
+        """
+        dPdt = np.zeros_like(P)
+        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
+        forces = self.compute_internal_forces(P)
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim)) 
+
+        nWall = nWall/nWall.norm2() #normalize the direction vector
+        for i in range(self.nodeNum):
+            d=(Vec3(nodes[i])-pWall).dot(nWall)
+            if d<0:
+                normalForce = -kWall*d*nWall
+                forces[i] += normalForce.to_array().squeeze()
+        for i in range(self.nodeNum):
+            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
+        return dPdt 
