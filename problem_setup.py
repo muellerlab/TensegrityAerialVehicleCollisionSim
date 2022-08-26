@@ -35,5 +35,5 @@ class design_param():
         self.designCase = 1
         self.dString = 100 #[N/(m/s)] 
         self.dRod = 100 #[N/(m/s)]
-        self.dJoint = 0.1 #[Nm/(rad/s)] Rotational damping constant
+        self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
         return

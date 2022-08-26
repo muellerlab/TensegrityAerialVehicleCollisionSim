@@ -12,9 +12,15 @@ from scipy.integrate import odeint, solve_ivp
 import seaborn as sns
 sns.set_theme()
 
-# Type of simulation: "initialMomentum" adds a momentum to the end nodes of the structure
-#                     "constantForce" exerts an external force at the end nodes
-simType = "constantForce"
+"""
+Simulate the dynamics of a single tensegrity under a sudden external load.
+Plot the forces in the system and animate the process
+Type of simulation: 
+"InitialMomentum" adds a momentum to the end nodes of the structure
+"ConstantForceWorldFrame" exerts constant world frame forces at the end nodes 
+"ConstantForceBodyFrame" exerts constant body frame external force at the end nodes
+"""
+simType = "ConstantForceBodyFrame"
 
 # Create the prop-guard design
 param = design_param()
@@ -29,7 +35,7 @@ massList = prop_guard.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.005 # [s] Simulation time
+tf = 0.02 # [s] Simulation time
 t_span = (t0,tf)
 
 # Rotate the whole tensegrity
@@ -73,6 +79,21 @@ elif simType == "constantForce":
     prop_guard_ODE =prop_guard_ode(prop_guard)
     sol = solve_ivp(prop_guard_ODE.ode_ivp_hit_force, t_span, P0, method='Radau',args=(extF,tf))
     print("Finish Simulation")
+
+
+elif simType == "ConstantForceBodyFrame":
+    azimuth = 0
+    elevation = np.pi/4
+    rot = Rotation.from_euler_YPR([azimuth,-elevation,0])
+    totalF = 100 #[N]
+    # Define and solve ODE
+    print("SimType:"+simType)
+    print("Start Simulation")
+    prop_guard_ODE =prop_guard_ode(prop_guard)
+    sol = solve_ivp(prop_guard_ODE.ode_ivp_force_body_frame, t_span, P0, method='Radau',args=(totalF,rot))
+    print("Finish Simulation")
+
+
 
 # Analyze the ODE result
 print("Recording Results")

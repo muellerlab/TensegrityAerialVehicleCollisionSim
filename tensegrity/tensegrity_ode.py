@@ -164,3 +164,22 @@ class tensegrity_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
+    
+
+    def ode_ivp_force_body_frame(self, t, P, totalF, rot:Rotation):
+        dPdt = np.zeros_like(P)
+        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
+        forces = self.compute_internal_forces(P)
+
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim)) 
+        d4 = Vec3(nodes[5]-nodes[4])/np.linalg.norm(nodes[5]-nodes[4])
+        f4 = (totalF/2)*(rot*d4)
+        d6 = Vec3(nodes[7]-nodes[6])/np.linalg.norm(nodes[7]-nodes[6])
+        f6 = (totalF/2)*(rot*(d6/d6.norm2()))
+
+        forces[4] += f4.to_array().squeeze()
+        forces[6] += f6.to_array().squeeze()
+        
+        for i in range(self.nodeNum):
+            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
+        return dPdt 

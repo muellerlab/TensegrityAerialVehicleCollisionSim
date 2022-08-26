@@ -13,12 +13,12 @@ sns.set_theme()
 """
 Simulate the dynamics of a single tensegrity under a sudden external load.
 Plot the forces in the system and animate the process
+Type of simulation: 
+"InitialMomentum" adds a momentum to the end nodes of the structure
+"ConstantForceWorldFrame" exerts constant world frame forces at the end nodes 
+"ConstantForceBodyFrame" exerts constant body frame external force at the end nodes
 """
-
-
-# Type of simulation: "InitialMomentum" adds a momentum to the end nodes of the structure
-#                     "ConstantForceWorldFrame" exerts an external force at the end nodes
-simType = "ConstantForceWorldFrame"
+simType = "ConstantForceBodyFrame"
 
 # Setup tensegrity
 param = design_param()
@@ -71,7 +71,7 @@ if simType == "InitialMoment":
 
 elif simType == "ConstantForceWorldFrame":
     theta = np.pi/4 #[rad] angle of collision
-    hitForce = 50 #[N]
+    hitForce = 100 #[N]
     extF = np.zeros((nodeNum,dim))
     F = hitForce/2*np.array([np.cos(theta),0,np.sin(theta)])
     extF[4]+=F
@@ -84,6 +84,17 @@ elif simType == "ConstantForceWorldFrame":
     sol = solve_ivp(tensegrity_ODE.ode_ivp_hit_force, t_span, P0, method='Radau',args=(extF,tf))
     print("Finish Simulation")
 
+elif simType == "ConstantForceBodyFrame":
+    azimuth = 0
+    elevation = np.pi/4 
+    rot = Rotation.from_euler_YPR([azimuth,-elevation,0])
+    totalF = 50 #[N]
+    # Define and solve ODE
+    print("SimType:"+simType)
+    print("Start Simulation")
+    tensegrity_ODE =tensegrity_ode(tensegrity)
+    sol = solve_ivp(tensegrity_ODE.ode_ivp_force_body_frame, t_span, P0, method='Radau',args=(totalF,rot))
+    print("Finish Simulation")
 
 # Analyze the ODE result
 print("Recording Results")

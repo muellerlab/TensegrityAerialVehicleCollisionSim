@@ -130,3 +130,21 @@ class prop_guard_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
+
+    def ode_ivp_force_body_frame(self, t, P, totalF, rot:Rotation):
+        dPdt = np.zeros_like(P)
+        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
+        forces = self.compute_internal_forces(P)
+
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim)) 
+        d0 = Vec3(nodes[5]-nodes[0])/np.linalg.norm(nodes[5]-nodes[0])
+        f0 = (totalF/2)*(rot*d0)
+        d8 = Vec3(nodes[4]-nodes[8])/np.linalg.norm(nodes[4]-nodes[8])
+        f8 = (totalF/2)*(rot*d8)
+
+        forces[0] += f0.to_array().squeeze()
+        forces[8] += f8.to_array().squeeze()
+        
+        for i in range(self.nodeNum):
+            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
+        return dPdt 
