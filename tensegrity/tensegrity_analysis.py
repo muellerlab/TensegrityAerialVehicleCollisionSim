@@ -12,6 +12,7 @@ class tensegrity_analysis():
         self.massList =tensegrity_ode.massList
         self.nodeNum = tensegrity_ode.nodeNum
         self.dim = tensegrity_ode.dim
+        self.faces = tensegrity_ode.tensegrity.faces
 
         # string
         self.dString = tensegrity_ode.dString
@@ -123,3 +124,63 @@ class tensegrity_analysis():
                 if nodeID == self.joints[jointID][1]:
                     nodeMaxStress[nodeID] += np.abs(jointStress[jointID])
         return nodeMaxStress
+
+    def compute_min_prop_dist_to_face(self, nodePos, propOffset = 0):
+        """
+        Warning: This tools involves geometric assumption that may no longer hold when large deformation takes place! 
+        Please use this function with caution. 
+
+        Input: nodePos - position of tensegrity nodes and quadcopter nodes
+               propOffset - vertical offset distance of propeller (i.e)
+
+        Summary: For each quadcopter node, we find its two neighbors and create a plane with these nodes.
+                 We assume the (quad node -> propeller) vector is vertical to this plane with a distance of given veritcal offset.
+                 Then, we find the distance from propeller to a tensegrity face as the shortest distance from propeller point 
+                 to the intersection between the propeller plane and the tensegrity face plane, which goes through the proller point and is parallel to the 3-node plane we found earlier. 
+
+        Output: shortest distance to surface for each propeller. Notice that this distance should be smaller than propR to prevent exposure.         
+        """
+
+
+        # Compute the distance from propeller nodes to tensegrity surface
+
+        quadNode = nodePos[12:,:]
+        planeNodes = [[1,0,2],[3,1,0],[0,2,3],[2,3,1]] #Id of nodes that forms plane according to the right hand rule
+
+        minDistList = np.zeros(4)
+        COM = Vec3(np.mean(nodePos,axis=0))
+
+        for propID in range(4):
+            planeNids = planeNodes[propID]
+            n0 = Vec3(quadNode[planeNids[0]])
+            n1 = Vec3(quadNode[planeNids[1]])
+            n2 = Vec3(quadNode[planeNids[2]])
+
+            cn012 = (n2-n1).cross(n0-n1)
+            v = cn012/cn012.norm2() # vertical direction 
+            propPos = Vec3(quadNode[propID]) + v*propOffset
+            minDist = 1e5
+            for face in self.faces:
+                m0 = Vec3(nodePos[face[0]])
+                m1 = Vec3(nodePos[face[1]])
+                m2 = Vec3(nodePos[face[2]])
+                cm012 = (m2-m1).cross(m0-m1)
+                nf = cm012/cm012.norm2() #normal vector of face 
+                if (COM-m0).dot(nf)<0:
+                    nf = -nf #COM is always "inside" 
+                
+                #Find distance to propeller center using geometry. 
+                vSurfDist = np.abs((m0-propPos).dot(nf)) # verical distance to surface
+                cosTheta = nf.dot(v) 
+                if cosTheta == 0:
+                    #Two normal vectors are vertical
+                    surfDist = vSurfDist
+                else:
+                    theta = np.arccos(cosTheta) 
+                    if theta > np.pi/2:
+                        theta = np.pi-theta
+                    surfDist = vSurfDist/np.sin(theta)
+                if surfDist<minDist:
+                    minDist = surfDist
+            minDistList[propID] = minDist  
+        return minDistList

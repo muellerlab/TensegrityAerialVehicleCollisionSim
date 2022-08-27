@@ -43,7 +43,8 @@ class tensegrity_design():
             ])
         COM = np.sum(unitTensegrityNodes[0:12,:],axis=0)/12
         self.unitNodePos = unitTensegrityNodes-COM # Move the unit node COM to [0,0,0]
-        
+
+        self.faces = self.get_faces(self.unitNodePos)
         self.strings = [
             [0, 4], 
             [0, 5], 
@@ -125,6 +126,31 @@ class tensegrity_design():
         ratio = np.abs(nullSpace[0]/nullSpace[strIDOffset])[0]
         return ratio
     
+
+    def get_faces(self, unitNodes):
+        # return enumerated list of faces, each face defined by the index of the three nodes making it up
+        # each face is defined by three nodes:
+        numNodes = len(unitNodes)
+        
+        # by design, n0 < n1 < n2
+        # first, enumerate all possibilities
+        faces = []
+        for i0 in range(numNodes):
+            for i1 in range(i0 + 1, numNodes):
+                for i2 in range(i1 + 1, numNodes):
+                    n0 = Vec3(unitNodes[i0])
+                    n1 = Vec3(unitNodes[i1])
+                    n2 = Vec3(unitNodes[i2])
+                    # check if it makes a face:
+                    c = (n0 + n1 + n2) / 3
+                    if c.norm2() < 0.4:
+                        continue # Only mid point of faces made with three points have distance larger than 0.4
+                    faces += [[i0, i1, i2]] 
+        return faces
+
+
+
+
     # Nonlinear equation system for the no-stress length and cross-sectional area of the string
     def funcString(self,x, sM, sRho, sLPreSS, sE, sPreT):
         # x[0] = sA, cross sectional area of string
@@ -270,9 +296,7 @@ class tensegrity_design():
     rIR: inner radius, zero for solid rod, non zero for tubes. 
     """
     def design_from_rod(self, rL0, rOR, propOffSet, sA, rIR = 0):
-
         stressRatio = self.findPretensionRatio(self.unitNodePos, self.fullRods, self.strings)
-
         self.rL = rL0
         self.rA = np.pi*(rOR**2-rIR**2)
         rPreT = self.param.sPreT * stressRatio # [N] rod pre-compression force

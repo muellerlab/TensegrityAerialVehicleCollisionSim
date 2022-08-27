@@ -19,6 +19,7 @@ rOR = 4/1000 #outer diameter
 rIR = 3/1000 #inner diameter
 propOffSet = param.propR
 sA = np.pi*(5e-4)**2 # String area
+vPropOffset = 15/1000 #veritcal propeller offset 
 tensegrity.design_from_rod(rL0, rOR, propOffSet, sA, rIR)
 
 nodeNum = tensegrity.nodeNum
@@ -80,6 +81,7 @@ jointSpringMomentHist = np.zeros((stepCount,len(joints)))
 jointDampingMomentHist = np.zeros((stepCount,len(joints)))
 jointStressHist = np.zeros((stepCount,len(joints)))
 nodeMaxStressHist = np.zeros((stepCount,nodeNum))
+minDistPropToSurface = np.zeros((stepCount,param.propNum))
 
 for i in range(nodeNum):
     for j in range(stepCount):
@@ -101,22 +103,7 @@ for i in range(stepCount):
     jointDampingMomentHist[i,:] = jointInfo_i[:,3]
     jointStressHist[i,:] = jointInfo_i[:,4]
     nodeMaxStressHist[i,:] = tensegrity_helper.compute_node_max_stress(rodStressHist[i], jointStressHist[i,:])
-    
-# Fig used in paper 
-figp = plt.figure(figsize=(36,7))
-n = 1 # num sub-plots
-figp.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    figp.add_subplot(n, 1, i, sharex=figp.axes[0])
-
-figp.axes[0].plot(tHist, jointStressHist[:,0], 'r-', label='Joint0&2 ', linewidth=6)
-figp.axes[0].plot(tHist, jointStressHist[:,1], 'b-', label='Joint1&3 ', linewidth=6)
-figp.axes[0].set_ylabel('Tensegrity Bending Stress [Pa]', fontsize=25)
-figp.axes[0].set_xlabel('Time [s]', fontsize=25)
-figp.axes[0].legend(fontsize=20)
-figp.axes[0].tick_params(axis='x', labelsize=20)
-figp.axes[0].tick_params(axis='y', labelsize=20)
-figp.axes[0].yaxis.get_offset_text().set_fontsize(20)
+    minDistPropToSurface[i,:] = tensegrity_helper.compute_min_prop_dist_to_face(nodePosHist[i],propOffSet)
 
 # Fig used for debug
 fig = plt.figure()
@@ -209,6 +196,19 @@ fig6.axes[1].set_ylabel('Stress [Pa]')
 fig6.axes[0].set_xlabel('Time [s]')
 fig6.axes[0].legend()
 fig6.axes[1].legend()
+
+
+fig7 = plt.figure()
+n = 1 # num sub-plots
+fig7.add_subplot(n, 1, 1)
+for i in range(2, n + 1):
+    fig7.add_subplot(n, 1, i, sharex=fig4.axes[0])
+
+for j in range(param.propNum):
+    fig7.axes[0].plot(tHist, minDistPropToSurface[:,j], 'rgbc'[j]+'-', label='minDist'+str(j))
+fig7.axes[0].set_ylabel('DistToSurface [m/s]')
+fig7.axes[0].set_xlabel('Time [s]')
+fig7.axes[0].legend()
 
 # Animation
 frameSampleRate = 10 #use 1 frame for each 1 sample 

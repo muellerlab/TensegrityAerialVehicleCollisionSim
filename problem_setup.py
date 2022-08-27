@@ -10,6 +10,7 @@ class design_param():
 
         propInch = 2.5 # 2.5in propeller diameter
         self.propR = propInch*(25.4)/(2*1000) #[m], radius of propeller
+        self.propNum = 4 # Vehicle with 4 propellers
 
         # rod
         self.rRho = 2000 #[kg/m^3] density of carbon fiber 
