@@ -241,6 +241,3 @@ class tensegrity_ode():
             if d>dMin:
                 dMin = d
         return dMin
-
-    print(wall_check_simple.direction)
-    print(wall_check_simple.terminal)

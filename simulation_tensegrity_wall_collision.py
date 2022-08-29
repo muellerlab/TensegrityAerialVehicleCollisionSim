@@ -46,7 +46,7 @@ for i in range(nodeNum):
     defaultPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-att = Rotation.from_euler_YPR([0,0,0])
+att = Rotation.from_euler_YPR([np.pi/6,-np.pi/6,0])
 initPos = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
