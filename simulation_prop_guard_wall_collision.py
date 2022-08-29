@@ -20,7 +20,6 @@ Type of simulation:
 "ConstantForceWorldFrame" exerts constant world frame forces at the end nodes 
 "ConstantForceBodyFrame" exerts constant body frame external force at the end nodes
 """
-
 # Create the prop-guard design
 param = design_param()
 prop_guard = prop_guard_design(param)
@@ -32,42 +31,48 @@ joints = prop_guard.joints
 links = prop_guard.links
 massList = prop_guard.massList
 
-
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.005 # [s] Simulation time
+tf = 0.02 # [s] Simulation time
 t_span = (t0,tf)
-speed = 6 # speed of collision
+speed = 5 # speed of collision
 
+# Rotate the vehicle to default setup: two propellers facing the wall
 
-# Rotate the whole tensegrity
-P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
 propRot = Rotation.from_euler_YPR([np.pi/4,0,0])
-rotatedPos = np.zeros_like(prop_guard.nodePosList)
-initVel = np.zeros_like(prop_guard.nodePosList)
+defaultPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
-    rotatedPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
+    defaultPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
+
+# Rotate the vehicle to desired attitude
+att = Rotation.from_euler_YPR([0,-np.pi/4,0])
+initPos = np.zeros_like(prop_guard.nodePosList)
+for i in range(nodeNum):
+    initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
+
+# Offset the vehicle so it is touching wall at the beginning of the simulation
+offset = np.min(initPos[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+initVel = np.zeros_like(prop_guard.nodePosList)  
+for i in range(nodeNum):
+    initPos[i] = initPos[i] - offset * np.array([1,0,0])
     initVel[i] = speed*Vec3(-1,0,0).to_array().squeeze()
-P0[:nodeNum*dim] = rotatedPos.reshape((nodeNum*dim,))
+
+P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
+P0[:nodeNum*dim] = initPos.reshape((nodeNum*dim,))
 P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
 # Setup wall 
-nWall = Vec3(1,0,0)
-pWall = Vec3(np.min(rotatedPos[:,0]),0,0) #Set the wall so that contact starts right at time 0
 Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
 Aw = 0.1*0.1 #[m^2], effective area of compression
 Lw = 3 #[m] thickness of wall
+nWall = Vec3(1,0,0)
+pWall = Vec3(0,0,0) #Set the wall so that contact starts right at time 0
 kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 
-
-
 print("Simulation type: wall collision")
-
 prop_guard_ODE =prop_guard_ode(prop_guard)
-sol = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall))
+sol = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), events=prop_guard_ODE.wall_check_simple)
 print("Finish Simulation")
-
-
 
 # Analyze the ODE result
 print("Recording Results")

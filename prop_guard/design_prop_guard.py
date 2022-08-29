@@ -114,7 +114,8 @@ class prop_guard_design():
             self.get_pos_from_propeller()
         
         rV = (self.param.mStructure/self.param.rRho)/2 #Assume the frame is made with two rods. 
-        self.rA = rV/np.linalg.norm(self.nodePosList[4,:]-self.nodePosList[0,:])
+        self.rL = np.linalg.norm(self.nodePosList[4,:]-self.nodePosList[0,:])
+        self.rA = rV/self.rL
         self.rR = np.sqrt(self.rA/np.pi) 
 
         self.linkLength = np.zeros(len(self.links))

@@ -12,6 +12,7 @@ class tensegrity_ode():
         self.nodeNum = tensegrity.nodeNum
         self.dim = tensegrity.dim
         self.massList =tensegrity.massList
+        self.rL = tensegrity.rL 
 
         # string
         self.dString = tensegrity.dString
@@ -146,6 +147,7 @@ class tensegrity_ode():
             return [elasticF, dampingF, rotF]
         else:
             return elasticF + dampingF + rotF
+            
 
     def ode_ivp_hit_force(self, t, P, extF, ft):
         dPdt = np.zeros_like(P)
@@ -164,7 +166,6 @@ class tensegrity_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
-    
 
     def ode_ivp_force_body_frame(self, t, P, totalF, rot:Rotation):
         dPdt = np.zeros_like(P)
@@ -208,3 +209,38 @@ class tensegrity_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
+    
+    def eventAttr():
+        def decorator(func):
+            func.direction = 1
+            func.terminal = True
+            return func
+        return decorator
+
+    @eventAttr()
+    def wall_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Check if the structure has stopped touching the wall. 
+        To decrease the computation. We assume: 1) normal direction of the wall is +x direction
+                                                2) the wall surface is at the plane that x=0
+        """
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))
+        dMin = np.min(nodes[:,0])        
+        return dMin-self.rL/20.0 #ends when the closest point to wall is 1/20 rL from the surface
+    
+    @eventAttr()
+    def wall_check(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Check if the structure has stopped touching the wall. 
+        Here we compute the smallest distance from structure to the wall
+        """
+        dMin = -self.rL
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))  
+        for i in range(self.nodeNum):
+            d=(Vec3(nodes[i])-pWall).dot(nWall)
+            if d>dMin:
+                dMin = d
+        return dMin
+
+    print(wall_check_simple.direction)
+    print(wall_check_simple.terminal)

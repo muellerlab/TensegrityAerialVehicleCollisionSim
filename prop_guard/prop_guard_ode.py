@@ -16,6 +16,7 @@ class prop_guard_ode():
         self.links = prop_guard.links
         self.dRod = prop_guard.dRod
         self.kLinkList = prop_guard.kLinkList
+        self.rL = prop_guard.rL
 
         self.joints = prop_guard.joints
         self.kJointList =prop_guard.kJointList
@@ -198,3 +199,36 @@ class prop_guard_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
+
+
+    def eventAttr():
+        def decorator(func):
+            func.direction = 1
+            func.terminal = True
+            return func
+        return decorator
+
+    @eventAttr()
+    def wall_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Check if the structure has stopped touching the wall. 
+        To decrease the computation. We assume: 1) normal direction of the wall is +x direction
+                                                2) the wall surface is at the plane that x=0
+        """
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))
+        dMin = np.min(nodes[:,0])        
+        return dMin-self.rL/20 #ends when the closest point to wall is 
+    
+    @eventAttr()
+    def wall_check(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Check if the structure has stopped touching the wall. 
+        Here we compute the smallest distance from structure to the wall
+        """
+        dMin = -self.rL
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))  
+        for i in range(self.nodeNum):
+            d=(Vec3(nodes[i])-pWall).dot(nWall)
+            if d>dMin:
+                dMin = d
+        return dMin-self.rL/20
