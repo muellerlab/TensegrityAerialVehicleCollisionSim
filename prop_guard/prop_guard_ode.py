@@ -22,17 +22,32 @@ class prop_guard_ode():
         self.dJoint =prop_guard.dJoint
         self.kJointStressList = prop_guard.kJointStressList
 
+        self.crossJoints = prop_guard.crossJoints
+        self.kCrossJointList = prop_guard.kCrossJointList
+        self.dCrossJoint = prop_guard.dCrossJoint
+        self.kCrossJointStressList = prop_guard.kCrossJointStressList
+
+
         self.baseLengthList = prop_guard.baseLengthList
         self.massList =prop_guard.massList
         pass
 
-    def compute_joint_forces(self, nodes, vels, jointID):
+    def compute_joint_forces(self, nodes, vels, jointID, crossJointFlag = False):
         """
         nodes: position vector of nodes 
         vels: velocity vector of nodes
         joint: ID of the three nodes that make up the joint. 
         """
-        joint = self.prop_guard.joints[jointID]
+
+        if crossJointFlag:
+            joint = self.crossJoints[jointID]
+            k = self.kCrossJointList[jointID]
+            d = self.dCrossJoint
+        else:
+            joint = self.joints[jointID]
+            k = self.kJointList[jointID]
+            d = self.dJoint
+
         n0 = nodes[joint[0]]
         n1 = nodes[joint[1]]
         n2 = nodes[joint[2]]
@@ -59,6 +74,9 @@ class prop_guard_ode():
         else:
             theta = np.arccos(cosTheta)
 
+        if crossJointFlag:
+            theta = theta - np.pi/2
+
         v01 = Vec3(vels[joint[0]] - vels[joint[1]])
         v0_tan_dir = -rotAxis012.cross(-e01) # when two rods are parallel, this vector is zero. Otherwise, it cross product of two uniform vector perpendicular to each other
         omega0 = v01.dot(v0_tan_dir)/l01 # angular rate due to rotation of 0-1 rod
@@ -66,8 +84,8 @@ class prop_guard_ode():
         v2_tan_dir = rotAxis012.cross(e12) # positive tangential direction for node 2 to increase bending angle
         omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
         
-        M_spring = theta*self.kJointList[jointID]
-        M_damping = (omega0 + omega2)*self.dJoint
+        M_spring = theta*k
+        M_damping = (omega0 + omega2)*d
 
         F0 = (((M_spring+M_damping)/l01)*-v0_tan_dir).to_array().squeeze()
         F2 = (((M_spring+M_damping)/l12)*-v2_tan_dir).to_array().squeeze()
@@ -107,6 +125,14 @@ class prop_guard_ode():
             rotF[self.joints[jointID][0]] += F0
             rotF[self.joints[jointID][1]] += F1
             rotF[self.joints[jointID][2]] += F2
+        
+
+        for jointID in range(len(self.crossJoints)):
+            [F0, F1, F2] =  self.compute_joint_forces(nodes,vels,jointID,True)
+            rotF[self.crossJoints[jointID][0]] += F0
+            rotF[self.crossJoints[jointID][1]] += F1
+            rotF[self.crossJoints[jointID][2]] += F2
+
         if sepReturn:
             return [springF, dampF, rotF]
         else:
@@ -147,8 +173,6 @@ class prop_guard_ode():
         for i in range(self.nodeNum):
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
-
-    
 
     def ode_ivp_wall(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
         """

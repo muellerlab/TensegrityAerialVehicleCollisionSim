@@ -68,9 +68,16 @@ class prop_guard_design():
             [5,6,2],
             [6,2,7],
             [2,7,8]]
+        
+
+        self.crossJoints = [[6,2,1],
+                           [3,2,6],
+                           [7,2,3],
+                           [1,2,7]] #4 cross joints
 
         self.dRod = self.param.dRod
         self.dJoint = self.param.dJoint
+        self.dCrossJoint = 20*self.dJoint
         pass
     
     def get_pos_from_comparable_tensegrity(self,propPos):
@@ -125,4 +132,16 @@ class prop_guard_design():
             jointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
             self.kJointStressList[i] = self.kJointList[i]*self.rR/jointI # stress = Moment*r/I
+
+
+        self.kCrossJointList = np.zeros(len(self.crossJoints))
+        self.kCrossJointStressList = np.zeros(len(self.crossJoints)) # Coefficient for max stress at the joint node. 
+
+        for i in range(len(self.crossJoints)):
+            [b,m,e] = self.joints[i]
+            jointLength = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m]) +  np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            jointI = (self.rR**4)*np.pi/4  #Second moment of area 
+            self.kCrossJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
+            self.kCrossJointStressList[i] = self.kCrossJointList[i]*self.rR/jointI # stress = Moment*r/I
+
         self.baseLengthList = self.linkLength # list of each length components

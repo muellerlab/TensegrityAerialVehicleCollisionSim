@@ -21,7 +21,7 @@ sns.set_theme()
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.005 # [s] Simulation time
+tf = 0.02 # [s] Simulation time
 tF = tf # [s] Duration of collision
 t_span = (t0,tf)
 
@@ -67,7 +67,7 @@ for i in range(nodeNum_p):
     rotatedPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 P_p[:nodeNum_p*dim_p] = rotatedPos.reshape((nodeNum_p*dim_p,))
 
-sectionNum = 50
+sectionNum = 3  #50
 
 theta0 = np.linspace(-np.pi/2, np.pi/2, sectionNum)
 theta1 = np.linspace(-np.pi/2, np.pi/2, sectionNum)
@@ -89,9 +89,7 @@ for angleIdx0 in range (sectionNum):
         print(angle0)
         print(angle1)
         rot =Rotation.from_euler_YPR([angle0,-angle1,0])
-
-        print(rot*Vec3(1,0,0))
-        
+        print(rot*Vec3(1,0,0))        
         prop_guard_ODE =prop_guard_ode(prop_guard)
         sol_p = solve_ivp(prop_guard_ODE.ode_ivp_force_body_frame, t_span, P_p, method='Radau',args=(totalF,rot))
         tHist_p = sol_p.t
