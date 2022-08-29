@@ -33,7 +33,7 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.05
+tf = 0.01
 # [s] Simulation time
 t_span = (t0,tf)
 speed = 6 # speed of collision
@@ -51,8 +51,11 @@ P0[nodeNum*dim:] = initVel.reshape((nodeNum*dim,))
 
 # Setup wall 
 nWall = Vec3(1,0,0)
-kWall = 4000 #Based on the example of concrete analysis in paper "What is the stiffness of reinforced concrete walls" by RC and Bull
 pWall = Vec3(np.min(rotatedPos[:,0]),0,0) #Set the wall so that contact starts right at time 0
+Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
+Aw = 0.1*0.1 #[m^2], effective area of compression
+Lw = 3 #[m] thickness of wall
+kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 
 print("Simulation type: wall collision")
 print("Begin Simulation")
@@ -219,4 +222,5 @@ for i in range(animateIteration):
 
 print("Creating Animation")
 animator = tensegrity_animator(tensegrity)
+animator.plot_wall(pWall,'x')
 animator.animate_tensegrity(nodePosHist,True,False)
