@@ -45,7 +45,8 @@ for i in range(nodeNum):
     defaultPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-att = Rotation.from_euler_YPR([np.pi/6,-np.pi/6,0])
+# att = Rotation.from_euler_YPR([np.pi/4,-np.pi/4,0])
+att = Rotation.from_euler_YPR([0,0,0])
 initPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
