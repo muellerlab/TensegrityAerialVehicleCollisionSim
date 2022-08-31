@@ -20,7 +20,7 @@ import seaborn as sns
 sns.set_theme()
 
 # Folder
-folderName = "compareStudy/"
+folderName = "compareStudy3/"
 # Setup wall 
 nWall = Vec3(1,0,0)
 Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
@@ -29,13 +29,11 @@ Lw = 3 #[m] thickness of wall
 kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 pWall = Vec3(0,0,0)
 
-
 # Setup simulation experiment
 t0 = 0 # [s]
 tf = 0.03 # [s] Simulation time
 tF = tf # [s] Duration of collision
 t_span = (t0,tf)
-
 initVel = 5 #[m/s]
 
 # Setup tensegrity
@@ -104,6 +102,10 @@ for angleIdx0 in range (sectionNum):
         initVel_p = np.zeros_like(initPos_p)
         for i in range(nodeNum_p):
             initPos_p[i] = (att*Vec3(defaultPos_p[i])).to_array().squeeze()
+        # Offset the vehicle so it is touching wall at the beginning of the simulation
+        offset_p = np.min(initPos_p[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+        for i in range(nodeNum_p):
+            initPos_p[i] = initPos_p[i]- offset_p * np.array([1,0,0])
             initVel_p[i] = speed*Vec3(-1,0,0).to_array().squeeze()
         P_p[:nodeNum_p*dim_p] = initPos_p.reshape((nodeNum_p*dim_p,))
         P_p[nodeNum_p*dim_p:] = initVel_p.reshape((nodeNum_p*dim_p,))        
@@ -140,6 +142,9 @@ for angleIdx0 in range (sectionNum):
         initVel_t = np.zeros_like(initPos_t)
         for i in range(nodeNum_t):
             initPos_t[i] = (att*Vec3(defaultPos_t[i])).to_array().squeeze()
+        offset_t = np.min(initPos_t[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+        for i in range(nodeNum_t):
+            initPos_t[i] = initPos_t[i] - offset_t * np.array([1,0,0])
             initVel_t[i] = speed*Vec3(-1,0,0).to_array().squeeze()
         P_t[:nodeNum_t*dim_t] = initPos_t.reshape((nodeNum_t*dim_t,))
         P_t[nodeNum_t*dim_t:] = initVel_t.reshape((nodeNum_t*dim_t,))        
@@ -170,7 +175,6 @@ for angleIdx0 in range (sectionNum):
             tensegrityMaxStress[angleIdx0,angleIdx1]=np.max(nodeMaxStressHist_t.flatten())
 
 # Creating figure
-
 if plotFlag:
     fig = plt.figure()
     ax = plt.axes(projection="3d")

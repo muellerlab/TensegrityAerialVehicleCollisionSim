@@ -25,10 +25,15 @@ tF = tf # [s] Duration of collision
 t_span = (t0,tf)
 speed = 5 # speed of collision
 
-sectionNum = 10
+sectionNum = 4
 theta = np.linspace(0, np.pi/2, sectionNum)
 preTension = np.linspace(0,100,sectionNum)
 X, Y = np.meshgrid(theta, preTension)
+
+
+print(X)
+print(Y)
+
 
 sizeTheta = theta.shape[0]
 sizePretension = preTension.shape[0]
@@ -47,14 +52,14 @@ kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 for thetaIdx in range (sectionNum):
     for preStressIdx in range (sectionNum):
         print("thetaIdx, preStressIdx =",(thetaIdx,preStressIdx))
-        angle = theta[thetaIdx]
+        angle = X[thetaIdx,preStressIdx]
         att =Rotation.from_euler_YPR([0,-angle,0])
-
         # Setup tensegrity
         param = design_param() # get default parameter
-        param.sPreT = preTension[preStressIdx] # Overwrite the prestress in string
+        param.sPreT = Y[thetaIdx,preStressIdx] # Overwrite the prestress in string
         tensegrity = tensegrity_design(param)
         tensegrity.design_from_propeller()
+        print("angle, preTension =",(angle,param.sPreT))
 
         nodeNum_t = tensegrity.nodeNum
         dim_t = tensegrity.dim
@@ -65,20 +70,15 @@ for thetaIdx in range (sectionNum):
         numString_t = tensegrity.numString
         massList_t = tensegrity.massList
 
-        P_t = np.zeros(nodeNum_t*dim_t*2) # Setup simulated values
-
-
         tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,0,0])
         defaultPos = np.zeros_like(tensegrity.nodePos)
         for i in range(nodeNum_t):
             defaultPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
         # Rotate the vehicle to desired attitude
-        att = Rotation.from_euler_YPR([np.pi/6,-np.pi/6,0])
         initPos = np.zeros_like(tensegrity.nodePos)
         for i in range(nodeNum_t):
             initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
-
         # Offset the vehicle so it is touching wall at the beginning of the simulation
         offset = np.min(initPos[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
         initVel = np.zeros_like(tensegrity.nodePos)  
@@ -110,10 +110,9 @@ for thetaIdx in range (sectionNum):
             rodStressHist_t[i] = tensegrity_helper.compute_rod_stress(nodePosHist_t[i])
             nodeMaxStressHist_t[i] = tensegrity_helper.compute_node_max_stress(rodStressHist_t[i], jointStress_i)
         tensegrityMaxStress[thetaIdx,preStressIdx]=np.max(nodeMaxStressHist_t.flatten())
-
+        print("maxStress=",tensegrityMaxStress[thetaIdx,preStressIdx])
         np.savetxt("preTS/t"+str(thetaIdx)+"_"+str(preStressIdx)+".csv", sol_t.t, delimiter=",")
-        np.savetxt("preTS/t"+str(thetaIdx)+"_"+str(preStressIdx)+".csv", sol_t.y, delimiter=",")
-
+        np.savetxt("preTS/p"+str(thetaIdx)+"_"+str(preStressIdx)+".csv", sol_t.y, delimiter=",")
         # Clean up objects
         tensegrity = None
         tensegrity_ODE = None
@@ -125,11 +124,10 @@ vmax = np.max(tensegrityMaxStress)
 levels = np.linspace(vmin, vmax, n+1)
 
 fig1, ax = plt.subplots(constrained_layout=True)
-cs = ax.contourf(X, Y, tensegrityMaxStress, cmap = 'GnBu',levels = levels)
+cs = ax.contourf(theta, preTension, tensegrityMaxStress, cmap = 'GnBu',levels = levels)
 ax.set_xlabel('pitch angle (rad)', fontsize=18)
 ax.set_ylabel('string pre-tension (N)', fontsize=18)
 ax.tick_params(labelsize=18)
 ax.set_title('Max Stress: Tensegrity', fontsize=18)
-ax.set_aspect('equal')
 fig1.colorbar(cs, orientation='horizontal')
 plt.show()
