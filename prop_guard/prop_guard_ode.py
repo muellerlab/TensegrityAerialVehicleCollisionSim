@@ -19,8 +19,8 @@ class prop_guard_ode():
         self.rL = prop_guard.rL
 
         self.joints = prop_guard.joints
-        self.kJointList =prop_guard.kJointList
-        self.dJoint =prop_guard.dJoint
+        self.kJointList = prop_guard.kJointList
+        self.dJoint = prop_guard.dJoint
         self.kJointStressList = prop_guard.kJointStressList
 
         self.crossJoints = prop_guard.crossJoints
@@ -76,7 +76,7 @@ class prop_guard_ode():
             theta = np.arccos(cosTheta)
 
         if crossJointFlag:
-            theta = theta - np.pi/2
+            theta = theta - np.pi/2 #default angle for cross joint is pi/2
 
         v01 = Vec3(vels[joint[0]] - vels[joint[1]])
         v0_tan_dir = -rotAxis012.cross(-e01) # when two rods are parallel, this vector is zero. Otherwise, it cross product of two uniform vector perpendicular to each other
@@ -127,7 +127,6 @@ class prop_guard_ode():
             rotF[self.joints[jointID][1]] += F1
             rotF[self.joints[jointID][2]] += F2
         
-
         for jointID in range(len(self.crossJoints)):
             [F0, F1, F2] =  self.compute_joint_forces(nodes,vels,jointID,True)
             rotF[self.crossJoints[jointID][0]] += F0
@@ -140,6 +139,7 @@ class prop_guard_ode():
             return springF + dampF + rotF
 
     def ode_ivp_hit_force(self,t, P, extF, ft):
+        # Simulate with constant external force described in world frame
         dPdt = np.zeros_like(P)
         dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
         forces = self.compute_internal_forces(P)
@@ -150,15 +150,8 @@ class prop_guard_ode():
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
 
-    def ode_ivp(self,t, P):
-        dPdt = np.zeros_like(P)
-        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
-        forces = self.compute_internal_forces(P)
-        for i in range(self.nodeNum):
-            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
-        return dPdt 
-
     def ode_ivp_force_body_frame(self, t, P, totalF, rot:Rotation):
+        # Simulate with constant external force described in body frame
         dPdt = np.zeros_like(P)
         dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
         forces = self.compute_internal_forces(P)
@@ -175,6 +168,15 @@ class prop_guard_ode():
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
 
+    def ode_ivp(self,t, P):
+        # Simulate with no external forces 
+        dPdt = np.zeros_like(P)
+        dPdt[:self.nodeNum*self.dim] = P[self.nodeNum*self.dim:]
+        forces = self.compute_internal_forces(P)
+        for i in range(self.nodeNum):
+            dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
+        return dPdt 
+
     def ode_ivp_wall(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
         """
         nWall: a normal vector pointing out of the wal
@@ -182,7 +184,6 @@ class prop_guard_ode():
         kWall: Hooke's constant of the wall
         wallX: x coordinate of the wall surface. Any point with pos.x < wallX is in the wall
         kWall: Hooke's coefficient of the wall 
-
         Assume the wall is a very stiff spring.
         """
         dPdt = np.zeros_like(P)
@@ -200,7 +201,6 @@ class prop_guard_ode():
             dPdt[self.nodeNum*self.dim+self.dim*i:self.nodeNum*self.dim+self.dim*(i+1)] = forces[i]/self.massList[i]
         return dPdt 
 
-
     def eventAttr():
         def decorator(func):
             func.direction = 1
@@ -214,6 +214,8 @@ class prop_guard_ode():
         Check if the structure has stopped touching the wall. 
         To decrease the computation. We assume: 1) normal direction of the wall is +x direction
                                                 2) the wall surface is at the plane that x=0
+        This function can be used to help terminate the simulation once the vehicle is away from the wall 
+
         """
         nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))
         dMin = np.min(nodes[:,0])        
@@ -225,10 +227,22 @@ class prop_guard_ode():
         Check if the structure has stopped touching the wall. 
         Here we compute the smallest distance from structure to the wall
         """
+        dGap = self.rL/20 #gap distance to terminate the simualtion
         dMin = -self.rL
         nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))  
         for i in range(self.nodeNum):
             d=(Vec3(nodes[i])-pWall).dot(nWall)
             if d>dMin:
                 dMin = d
-        return dMin-self.rL/20
+        return (dMin-dGap)
+    
+    @eventAttr()
+    def vel_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Stop the simulation when COM velocity is pointing away from the wall with a certain threshold speed.
+        We expect maximum deformation to take place before this moment.
+        """
+        threshold = 0.1 #[m/s]
+        vels = P[self.nodeNum*self.dim:].reshape((self.nodeNum,self.dim)) 
+        vel_x = vels[:,0]
+        return (vel_x-threshold).dot(self.massList) #weighted average of node velocity

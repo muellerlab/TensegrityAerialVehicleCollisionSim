@@ -20,6 +20,11 @@ class prop_guard_analysis():
         self.kJointList =prop_guard_ode.kJointList
         self.kJointStressList =prop_guard_ode.kJointStressList
         self.dJoint =prop_guard_ode.dJoint
+
+        self.crossJoints = prop_guard_ode.crossJoints
+        self.kCrossJointList = prop_guard_ode.kCrossJointList
+        self.dCrossJoint = prop_guard_ode.dCrossJoint
+        self.kCrossJointStressList = prop_guard_ode.kCrossJointStressList
         pass
 
     def compute_joint_angle_and_torque(self,nodes,vels):
@@ -71,6 +76,54 @@ class prop_guard_analysis():
             jointInfo[jointID, 4] = theta*self.kJointStressList[jointID] # stress due to bending at the joint
         return jointInfo
 
+    def compute_cross_joint_angle_and_torque(self,nodes,vels):
+        # compute joint angle, spring moment and damping moment at the joint
+        crossJointInfo = np.zeros((len(self.crossJoints),5))
+        for cjID in range(len(self.crossJoints)):
+            crossJoint = self.crossJoints[cjID]
+            n0 = nodes[crossJoint[0]]
+            n1 = nodes[crossJoint[1]]
+            n2 = nodes[crossJoint[2]]
+
+            l01 = np.linalg.norm(n1-n0)
+            l12 = np.linalg.norm(n2-n1)
+            e01 = Vec3(n1-n0)/l01
+            e12 = Vec3(n2-n1)/l12
+            
+            cross012 = e01.cross(e12)
+            norm012 = cross012.norm2()
+
+            if norm012 < 1e-10:
+                # If two rods are parallel. No rotation axis can be determined. 
+                # We overwrite it with zero-vector so corresponding torque will be zero
+                rotAxis012 = Vec3(0,0,0) 
+            else:
+                rotAxis012 = cross012/norm012
+            cosTheta = e01.dot(e12)
+            if cosTheta < -(1-1e-12):
+                theta = np.pi
+            elif cosTheta > (1-1e-12):
+                theta = 0
+            else:
+                theta = np.arccos(cosTheta)
+
+            v01 = Vec3(vels[crossJoint[0]] - vels[crossJoint[1]])
+            v0_tan_dir = -rotAxis012.cross(-e01) # when two rods are parallel, this vector is zero. Otherwise, it cross product of two uniform vector perpendicular to each other
+            omega0 = v01.dot(v0_tan_dir)/l01 # angular rate due to rotation of 0-1 rod
+            v21 = Vec3(vels[crossJoint[2]] - vels[crossJoint[1]])
+            v2_tan_dir = rotAxis012.cross(e12) # positive tangential direction for node 2 to increase bending angle
+            omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
+            
+            M_spring = (theta-np.pi/2)*self.kCrossJointList[cjID]
+            M_damping = (omega0 + omega2)*self.dCrossJoint
+
+            crossJointInfo[cjID, 0] = theta 
+            crossJointInfo[cjID, 1] = omega0+omega2 
+            crossJointInfo[cjID, 2] = M_spring 
+            crossJointInfo[cjID, 3] = M_damping
+            crossJointInfo[cjID, 4] = (theta-np.pi/2)*self.kCrossJointStressList[cjID] # stress due to bending at the joint
+        return crossJointInfo
+
     def compute_link_force(self,nodePos):
         # compute all elastic forces in rods based on node position
         linkForce = np.zeros(len(self.links))
@@ -85,7 +138,7 @@ class prop_guard_analysis():
         # Compute the stress of each link
         return self.compute_link_force(nodePos)/(self.prop_guard_ode.prop_guard.rA)
 
-    def compute_node_max_stress(self,linkStress, jointStress):
+    def compute_node_max_stress(self,linkStress, jointStress, crossJointStress = None):
         # linkStress: len(link) * 1, stress at each link due to compression/extension 
         # jointStress: nodeNum * 1, stress at each node due to bending moment 
         # We compute the max stress each node is under. (Notice that stress on both sides of the node might be different)
@@ -100,9 +153,16 @@ class prop_guard_analysis():
             for jointID in range(len(self.joints)):
                 if nodeID == self.joints[jointID][1]:
                     nodeMaxStress[nodeID] += np.abs(jointStress[jointID])
+        
+        if not (crossJointStress is None):
+            for i in range(len(self.crossJoints)):
+                nodeID = self.crossJoints[i][1]
+                if crossJointStress[i] > nodeMaxStress[nodeID]:
+                    nodeMaxStress[nodeID] = crossJointStress[i] # if cross joint stress is larger, overwrite the node stress with the larger one
+
         return nodeMaxStress
 
-    def compute_joint_forces_for_record(self,nodes, vels, returnStress = False):
+    def compute_joint_forces_for_record(self, nodes, vels, returnStress = False):
         """
         nodes: position vector of nodes 
         vels: velocity vector of nodes
@@ -169,3 +229,14 @@ class prop_guard_analysis():
             return [rotationSpringF, rotationDampingF, jointStress]
         else:
             return [rotationSpringF, rotationDampingF]
+
+    def compute_wall_collision_force(self, nodePos, nWall:Vec3, kWall, pWall:Vec3):
+        # Compute the stress of each link
+        nodeF = np.zeros(self.nodeNum)
+        nWall = nWall/nWall.norm2() #normalize the direction vector
+        for i in range(self.nodeNum):
+            d=(Vec3(nodePos[i])-pWall).dot(nWall)
+            if d<0:
+                normalForce = -kWall*d*nWall
+                nodeF[i] = normalForce.norm2()
+        return nodeF

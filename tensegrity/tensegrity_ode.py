@@ -217,17 +217,7 @@ class tensegrity_ode():
             return func
         return decorator
 
-    @eventAttr()
-    def wall_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
-        """
-        Check if the structure has stopped touching the wall. 
-        To decrease the computation. We assume: 1) normal direction of the wall is +x direction
-                                                2) the wall surface is at the plane that x=0
-        """
-        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))
-        dMin = np.min(nodes[:,0])        
-        return dMin-self.rL/20.0 #ends when the closest point to wall is 1/20 rL from the surface
-    
+
     @eventAttr()
     def wall_check(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
         """
@@ -241,3 +231,25 @@ class tensegrity_ode():
             if d>dMin:
                 dMin = d
         return dMin
+
+    @eventAttr()
+    def wall_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Check if the structure has stopped touching the wall. 
+        To decrease the computation. We assume: 1) normal direction of the wall is +x direction
+                                                2) the wall surface is at the plane that x=0
+        """
+        nodes = P[:self.nodeNum*self.dim].reshape((self.nodeNum,self.dim))
+        dMin = np.min(nodes[:,0])        
+        return dMin-self.rL/20.0 #ends when the closest point to wall is 1/20 rL from the surface
+    
+    @eventAttr()
+    def vel_check_simple(self, t, P, nWall:Vec3, kWall, pWall:Vec3):
+        """
+        Stop the simulation when COM velocity is pointing away from the wall with a certain threshold speed.
+        We expect maximum deformation to take place before this moment.  
+        """
+        threshold = 0.1 #[m/s]
+        vels = P[self.nodeNum*self.dim:].reshape((self.nodeNum,self.dim)) 
+        vel_x = vels[:,0]
+        return (vel_x-threshold).dot(self.massList) #weighted average of node velocity

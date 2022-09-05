@@ -125,10 +125,22 @@ class tensegrity_analysis():
                     nodeMaxStress[nodeID] += np.abs(jointStress[jointID])
         return nodeMaxStress
 
+    def compute_wall_collision_force(self, nodePos, nWall:Vec3, kWall, pWall:Vec3):
+        # Compute the stress of each link
+        nodeF = np.zeros(self.nodeNum)
+        nWall = nWall/nWall.norm2() #normalize the direction vector
+        for i in range(self.nodeNum):
+            d=(Vec3(nodePos[i])-pWall).dot(nWall)
+            if d<0:
+                normalForce = -kWall*d*nWall
+                nodeF[i] = normalForce.norm2()
+        return nodeF
+
+
     def compute_min_prop_dist_to_face(self, nodePos, propOffset = 0):
         """
         Warning: This tools involves geometric assumption that may no longer hold when large deformation takes place! 
-        Please use this function with caution. 
+        Please use this function with caution!
 
         Input: nodePos - position of tensegrity nodes and quadcopter nodes
                propOffset - vertical offset distance of propeller (i.e)
@@ -140,8 +152,6 @@ class tensegrity_analysis():
 
         Output: shortest distance to surface for each propeller. Notice that this distance should be smaller than propR to prevent exposure.         
         """
-
-
         # Compute the distance from propeller nodes to tensegrity surface
 
         quadNode = nodePos[12:,:]

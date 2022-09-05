@@ -10,6 +10,16 @@ from scipy.integrate import solve_ivp
 import seaborn as sns
 sns.set_theme()
 
+"""
+Simulate the dynamics of a tensegrity under wall collision. 
+Plot the information in the system and animate the process
+"""
+
+# Setup running functions
+drawDebugPlots = True
+createAnimation = True
+
+
 # Setup tensegrity
 param = design_param() #Load structure & material parameter 
 tensegrity = tensegrity_design(param)
@@ -33,7 +43,7 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.05
+tf = 0.02
 # [s] Simulation time
 t_span = (t0,tf)
 speed = 5 # speed of collision
@@ -46,8 +56,7 @@ for i in range(nodeNum):
     defaultPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-# att = Rotation.from_euler_YPR([np.pi/2,-np.pi/2,0])
-att = Rotation.from_euler_YPR([0,0,0])
+att = Rotation.from_euler_YPR([0,-np.pi/4,0])
 initPos = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
@@ -74,7 +83,7 @@ kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 print("Simulation type: wall collision")
 print("Begin Simulation")
 tensegrity_ODE =tensegrity_ode(tensegrity)
-sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall),events=tensegrity_ODE.wall_check_simple)
+sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), events=tensegrity_ODE.vel_check_simple)
 print("Finish Simulation")
 # Analyze the ODE result
 print("Recording Results")
@@ -99,6 +108,7 @@ jointDampingMomentHist = np.zeros((stepCount,len(joints)))
 jointStressHist = np.zeros((stepCount,len(joints)))
 nodeMaxStressHist = np.zeros((stepCount,nodeNum))
 minDistPropToSurface = np.zeros((stepCount,param.propNum))
+extForceHist = np.zeros((stepCount,nodeNum)) # external force for node collision
 
 for i in range(nodeNum):
     for j in range(stepCount):
@@ -121,120 +131,153 @@ for i in range(stepCount):
     jointStressHist[i,:] = jointInfo_i[:,4]
     nodeMaxStressHist[i,:] = tensegrity_helper.compute_node_max_stress(rodStressHist[i], jointStressHist[i,:])
     minDistPropToSurface[i,:] = tensegrity_helper.compute_min_prop_dist_to_face(nodePosHist[i],propOffSet)
+    extForceHist[i,:] = tensegrity_helper.compute_wall_collision_force(nodePosHist[i],nWall, kWall, pWall)
 
-# Fig used for debug
-fig = plt.figure()
-n = 2 # num sub-plots
-fig.add_subplot(n, 1, 1)
+if drawDebugPlots:
 
-for i in range(2, n + 1):
-    fig.add_subplot(n, 1, i, sharex=fig.axes[0])
+    # Fig used for debug
+    fig = plt.figure()
+    n = 2 # num sub-plots
+    fig.add_subplot(n, 1, 1)
 
-for j in range(24):
-    fig.axes[0].plot(tHist, stringForceHist[:,j], '-', label='fString_'+str(j))
-    fig.axes[0].set_ylabel('Force [N]')
-    fig.axes[0].set_xlabel('Time [s]')
-    fig.axes[0].legend()
+    for i in range(2, n + 1):
+        fig.add_subplot(n, 1, i, sharex=fig.axes[0])
 
-for j in range(6):
-    fig.axes[1].plot(tHist, rodForceHist[:,j], '-', label='fRod_'+str(j))
-    fig.axes[1].set_ylabel('Force [N]')
-    fig.axes[1].set_xlabel('Time [s]')
-    fig.axes[1].legend()
+    for j in range(24):
+        fig.axes[0].plot(tHist, stringForceHist[:,j], '-', label='fString_'+str(j))
+        fig.axes[0].set_ylabel('Force [N]')
+        fig.axes[0].set_xlabel('Time [s]')
+        fig.axes[0].legend()
 
-fig2 = plt.figure()
-n = 2 # num sub-plots
-fig2.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig2.add_subplot(n, 1, i, sharex=fig2.axes[0])
+    for j in range(6):
+        fig.axes[1].plot(tHist, rodForceHist[:,j], '-', label='fRod_'+str(j))
+        fig.axes[1].set_ylabel('Force [N]')
+        fig.axes[1].set_xlabel('Time [s]')
+        fig.axes[1].legend()
+    fig.axes[0].set_title('String force')
+    fig.axes[1].set_title('Rod force')
 
-for j in range(len(joints)):
-    fig2.axes[0].plot(tHist, jointSpringMomentHist[:,j], '-', label='Joint '+str(j), linewidth=3)
-    fig2.axes[1].plot(tHist, jointDampingMomentHist[:,j], '-', label='dampingMomentJoint_'+str(j))
-fig2.axes[0].set_ylabel('Moment [Nm]')
-fig2.axes[1].set_ylabel('Moment [Nm]')
-fig2.axes[1].set_xlabel('Time [s]')
-fig2.axes[0].legend()
-fig2.axes[1].legend()
+    fig2 = plt.figure()
+    n = 2 # num sub-plots
+    fig2.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig2.add_subplot(n, 1, i, sharex=fig2.axes[0])
 
-fig3 = plt.figure()
-n = nodeNum # num sub-plots
-fig3.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig3.add_subplot(n, 1, i, sharex=fig3.axes[0])
-
-for j in range(nodeNum):
-    fig3.axes[j].plot(tHist, nodePosHist[:,j,0], 'r-', label='pos'+str(j)+'x')
-    fig3.axes[j].plot(tHist, nodePosHist[:,j,1], 'g-', label='pos'+str(j)+'y')
-    fig3.axes[j].plot(tHist, nodePosHist[:,j,2], 'b-', label='pos'+str(j)+'z')
-    fig3.axes[j].set_ylabel('Pos [m]')
-    fig3.axes[j].set_xlabel('Time [s]')
-    fig3.axes[j].legend()
-
-fig4 = plt.figure()
-n = nodeNum # num sub-plots
-fig4.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig4.add_subplot(n, 1, i, sharex=fig4.axes[0])
-
-for j in range(nodeNum):
-    fig4.axes[j].plot(tHist, nodeVelHist[:,j,0], 'r-', label='vel'+str(j)+'x')
-    fig4.axes[j].plot(tHist, nodeVelHist[:,j,1], 'g-', label='vel'+str(j)+'y')
-    fig4.axes[j].plot(tHist, nodeVelHist[:,j,2], 'b-', label='vel'+str(j)+'z')
-    fig4.axes[j].set_ylabel('Vel [m/s]')
-    fig4.axes[j].set_xlabel('Time [s]')
-    fig4.axes[j].legend()
-
-fig5 = plt.figure()
-n = 2 # num sub-plots
-fig5.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig5.add_subplot(n, 1, i, sharex=fig5.axes[0])
-for j in range(len(joints)):
-    fig5.axes[0].plot(tHist, jointAngleHist[:,j], '-', label='angleJoint'+str(j))
-    fig5.axes[1].plot(tHist, jointAngularRateHist[:,j], '-', label='omegaJoint'+str(j))
-fig5.axes[0].set_ylabel('Angle [Rad]')
-fig5.axes[1].set_ylabel('Angular Rate [Rad/s]')
-fig5.axes[0].set_xlabel('Time [s]')
-fig5.axes[0].legend()
-fig5.axes[1].legend()
-
-fig6 = plt.figure()
-n = 2 # num sub-plots
-fig6.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig6.add_subplot(n, 1, i, sharex=fig5.axes[0])
-for j in range(len(joints)):
-    fig6.axes[0].plot(tHist, jointStressHist[:,j], '-', label='stressJoint'+str(j))
-for j in range(nodeNum):
-    fig6.axes[1].plot(tHist, nodeMaxStressHist[:,j], '-', label='maxStressNode'+str(j))
-fig6.axes[0].set_ylabel('Stress [Pa]')
-fig6.axes[1].set_ylabel('Stress [Pa]')
-fig6.axes[0].set_xlabel('Time [s]')
-fig6.axes[0].legend()
-fig6.axes[1].legend()
+    for j in range(len(joints)):
+        fig2.axes[0].plot(tHist, jointSpringMomentHist[:,j], '-', label='Joint '+str(j), linewidth=3)
+        fig2.axes[1].plot(tHist, jointDampingMomentHist[:,j], '-', label='dampingMomentJoint_'+str(j))
+    fig2.axes[0].set_ylabel('Moment [Nm]')
+    fig2.axes[1].set_ylabel('Moment [Nm]')
+    fig2.axes[1].set_xlabel('Time [s]')
+    fig2.axes[0].legend()
+    fig2.axes[1].legend()
+    fig2.axes[0].set_title('Joint spring moment')
+    fig2.axes[1].set_title('Joint damping moment')
 
 
-fig7 = plt.figure()
-n = 1 # num sub-plots
-fig7.add_subplot(n, 1, 1)
-for i in range(2, n + 1):
-    fig7.add_subplot(n, 1, i, sharex=fig4.axes[0])
+    fig3 = plt.figure()
+    n = nodeNum # num sub-plots
+    fig3.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig3.add_subplot(n, 1, i, sharex=fig3.axes[0])
 
-for j in range(param.propNum):
-    fig7.axes[0].plot(tHist, minDistPropToSurface[:,j], 'rgbc'[j]+'-', label='minDist'+str(j))
-fig7.axes[0].set_ylabel('DistToSurface [m/s]')
-fig7.axes[0].set_xlabel('Time [s]')
-fig7.axes[0].legend()
+    for j in range(nodeNum):
+        fig3.axes[j].plot(tHist, nodePosHist[:,j,0], 'r-', label='pos'+str(j)+'x')
+        fig3.axes[j].plot(tHist, nodePosHist[:,j,1], 'g-', label='pos'+str(j)+'y')
+        fig3.axes[j].plot(tHist, nodePosHist[:,j,2], 'b-', label='pos'+str(j)+'z')
+        fig3.axes[j].set_ylabel('Pos [m]')
+        fig3.axes[j].set_xlabel('Time [s]')
+        fig3.axes[j].legend()
+    fig3.axes[0].set_title('Node position')
 
-# Animation
-frameSampleRate = 10 #use 1 frame for each 1 sample 
-animateIteration = stepCount//frameSampleRate
-nodePosAnimateData = np.zeros((animateIteration,nodeNum,dim))
-for i in range(animateIteration):
-    nodePosAnimateData[i] = nodePosHist[i*frameSampleRate]
+    fig4 = plt.figure()
+    n = nodeNum # num sub-plots
+    fig4.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig4.add_subplot(n, 1, i, sharex=fig4.axes[0])
 
-print("Creating Animation")
-animator = tensegrity_animator(tensegrity)
-animator.plot_wall(pWall,'x')
-animator.animate_tensegrity(nodePosHist,True,False)
+    for j in range(nodeNum):
+        fig4.axes[j].plot(tHist, nodeVelHist[:,j,0], 'r-', label='vel'+str(j)+'x')
+        fig4.axes[j].plot(tHist, nodeVelHist[:,j,1], 'g-', label='vel'+str(j)+'y')
+        fig4.axes[j].plot(tHist, nodeVelHist[:,j,2], 'b-', label='vel'+str(j)+'z')
+        fig4.axes[j].set_ylabel('Vel [m/s]')
+        fig4.axes[j].set_xlabel('Time [s]')
+        fig4.axes[j].legend()
+    fig4.axes[0].set_title('Node velocity')
+
+    fig5 = plt.figure()
+    n = 2 # num sub-plots
+    fig5.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig5.add_subplot(n, 1, i, sharex=fig5.axes[0])
+    for j in range(len(joints)):
+        fig5.axes[0].plot(tHist, jointAngleHist[:,j], '-', label='angleJoint'+str(j))
+        fig5.axes[1].plot(tHist, jointAngularRateHist[:,j], '-', label='omegaJoint'+str(j))
+    fig5.axes[0].set_ylabel('Angle [Rad]')
+    fig5.axes[1].set_ylabel('Angular Rate [Rad/s]')
+    fig5.axes[0].set_xlabel('Time [s]')
+    fig5.axes[0].legend()
+    fig5.axes[1].legend()
+    fig5.axes[0].set_title('Joint angle')
+    fig5.axes[0].set_title('Joint angular velocity')
+
+
+    fig6 = plt.figure()
+    n = 2 # num sub-plots
+    fig6.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig6.add_subplot(n, 1, i, sharex=fig5.axes[0])
+    for j in range(len(joints)):
+        fig6.axes[0].plot(tHist, jointStressHist[:,j], '-', label='stressJoint'+str(j))
+    for j in range(nodeNum):
+        fig6.axes[1].plot(tHist, nodeMaxStressHist[:,j], '-', label='maxStressNode'+str(j))
+    fig6.axes[0].set_ylabel('Stress [Pa]')
+    fig6.axes[1].set_ylabel('Stress [Pa]')
+    fig6.axes[0].set_xlabel('Time [s]')
+    fig6.axes[0].legend()
+    fig6.axes[1].legend()
+    fig6.axes[0].set_title('Stress in joint')
+    fig6.axes[1].set_title('Max stress in node')
+
+
+    fig7 = plt.figure()
+    n = 1 # num sub-plots
+    fig7.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig7.add_subplot(n, 1, i, sharex=fig4.axes[0])
+
+    for j in range(param.propNum):
+        fig7.axes[0].plot(tHist, minDistPropToSurface[:,j], 'rgbc'[j]+'-', label='minDist'+str(j))
+    fig7.axes[0].set_ylabel('DistToSurface [m/s]')
+    fig7.axes[0].set_xlabel('Time [s]')
+    fig7.axes[0].legend()
+    fig7.axes[0].set_title('Propeller distance to surface')
+
+    # Fig8, external collison force from wall
+    fig8 = plt.figure()
+    n = 1 # num sub-plots
+    fig8.add_subplot(n, 1, 1)
+    for i in range(2, n + 1):
+        fig8.add_subplot(n, 1, i, sharex=fig8.axes[0])
+    for j in range(nodeNum):
+        fig8.axes[0].plot(tHist, extForceHist[:,j], '-', label='extF'+str(j))
+    fig8.axes[0].set_ylabel('Force [N]')
+    fig8.axes[0].set_xlabel('Time [s]')
+    fig8.axes[0].legend()
+    fig8.axes[0].set_title('Wall collision force')
+
+    if not(createAnimation):
+        plt.show()
+
+if createAnimation:
+    # Animation
+    frameSampleRate = 10 #use 1 frame for each 1 sample 
+    animateIteration = stepCount//frameSampleRate
+    nodePosAnimateData = np.zeros((animateIteration,nodeNum,dim))
+    for i in range(animateIteration):
+        nodePosAnimateData[i] = nodePosHist[i*frameSampleRate]
+
+    print("Creating Animation")
+    animator = tensegrity_animator(tensegrity)
+    animator.plot_wall(pWall,'x')
+    animator.animate_tensegrity(nodePosHist,True,False)
