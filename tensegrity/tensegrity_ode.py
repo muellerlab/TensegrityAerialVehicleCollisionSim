@@ -23,14 +23,14 @@ class tensegrity_ode():
         # rod
         self.numRod =tensegrity.numRod
         self.rods = tensegrity.rods
-        self.dRod = tensegrity.dRod
         self.kRodList = tensegrity.kRodList
+        self.dRodList = tensegrity.dRodList
         self.rodLength0List = tensegrity.rodLength0List
 
         # joints
         self.joints = tensegrity.joints
         self.kJointList =tensegrity.kJointList
-        self.dJoint =tensegrity.dJoint
+        self.dJointList =tensegrity.dJointList
         self.kJointStressList = tensegrity.kJointStressList
         pass
 
@@ -76,7 +76,7 @@ class tensegrity_ode():
         omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
         
         M_spring = theta*self.kJointList[jointID]
-        M_damping = (omega0 + omega2)*self.dJoint
+        M_damping = (omega0 + omega2)*self.dJointList[jointID]
 
         F0 = (((M_spring+M_damping)/l01)*-v0_tan_dir).to_array().squeeze()
         F2 = (((M_spring+M_damping)/l12)*-v2_tan_dir).to_array().squeeze()
@@ -110,7 +110,7 @@ class tensegrity_ode():
 
                     l = np.linalg.norm(e)  # current length
                     vab = vaE - vbE
-                    dampingF[node] += -self.dRod*(vab.dot(e/l))*(e/l) 
+                    dampingF[node] += -self.dRodList[rodID]*(vab.dot(e/l))*(e/l) 
                     elasticF[node] += self.kRodList[rodID]*(l-self.rodLength0List[rodID])*e/l
 
             for s in self.strings:

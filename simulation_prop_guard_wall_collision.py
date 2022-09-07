@@ -29,7 +29,7 @@ prop_guard.design()
 nodeNum = prop_guard.nodeNum
 dim = prop_guard.dim
 joints = prop_guard.joints
-links = prop_guard.links
+rods = prop_guard.rods
 crossJoints = prop_guard.crossJoints
 massList = prop_guard.massList
 
@@ -94,7 +94,7 @@ crossJointAngularRateHist = np.zeros((stepCount,len(crossJoints)))
 crossJointSpringMomentHist = np.zeros((stepCount,len(crossJoints)))
 crossJointDampingMomentHist = np.zeros((stepCount,len(crossJoints)))
 
-linkStressHist = np.zeros((stepCount,len(links)))
+rodStressHist = np.zeros((stepCount,len(rods)))
 jointStressHist = np.zeros((stepCount,len(joints)))
 crossJointStressHist = np.zeros((stepCount,len(crossJoints)))
 nodeMaxStressHist = np.zeros((stepCount,nodeNum))
@@ -119,8 +119,8 @@ for i in range(stepCount):
     crossJointDampingMomentHist[i,:] = crossJointInfo_i[:,3]
     crossJointStressHist[i,:] = crossJointInfo_i[:,4]
     
-    linkStressHist[i,:] = prop_guard_helper.compute_link_stress(nodePosHist[i])
-    nodeMaxStressHist[i,:] = prop_guard_helper.compute_node_max_stress(linkStressHist[i], jointStressHist[i,:],crossJointStressHist[i,:])
+    rodStressHist[i,:] = prop_guard_helper.compute_rod_stress(nodePosHist[i])
+    nodeMaxStressHist[i,:] = prop_guard_helper.compute_node_max_stress(rodStressHist[i], jointStressHist[i,:],crossJointStressHist[i,:])
     extForceHist[i,:] = prop_guard_helper.compute_wall_collision_force(nodePosHist[i],nWall, kWall, pWall)
 
 if drawDebugPlots:
@@ -132,8 +132,8 @@ if drawDebugPlots:
     for i in range(2, n + 1):
         fig.add_subplot(n, 1, i, sharex=fig.axes[0])
 
-    for j in range(len(links)):
-        fig.axes[0].plot(tHist, linkStressHist[:,j], '-', label='Rod_'+str(j))
+    for j in range(len(rods)):
+        fig.axes[0].plot(tHist, rodStressHist[:,j], '-', label='Rod_'+str(j))
     fig.axes[0].set_ylabel('Stress [Pa]')
     fig.axes[0].set_xlabel('Time [s]')
     fig.axes[0].set_title('Stress in rods')

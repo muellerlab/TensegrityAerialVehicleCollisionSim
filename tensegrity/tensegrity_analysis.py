@@ -23,14 +23,14 @@ class tensegrity_analysis():
         # rod
         self.numRod =tensegrity_ode.numRod
         self.rods = tensegrity_ode.rods
-        self.dRod = tensegrity_ode.dRod
         self.kRodList = tensegrity_ode.kRodList
+        self.dRodList = tensegrity_ode.dRodList
         self.rodLength0List = tensegrity_ode.rodLength0List
 
         # joints
         self.joints = tensegrity_ode.joints
         self.kJointList =tensegrity_ode.kJointList
-        self.dJoint =tensegrity_ode.dJoint
+        self.dJointList =tensegrity_ode.dJointList
         self.kJointStressList = tensegrity_ode.kJointStressList
         pass
 
@@ -74,7 +74,7 @@ class tensegrity_analysis():
             omega2 = v21.dot(v2_tan_dir)/l12 # angular rate due to rotation of 1-2 rod
             
             M_spring = theta*self.kJointList[jointID]
-            M_damping = (omega0 + omega2)*self.dJoint
+            M_damping = (omega0 + omega2)*self.dJointList[jointID]
 
             jointInfo[jointID, 0] = theta 
             jointInfo[jointID, 1] = omega0+omega2 

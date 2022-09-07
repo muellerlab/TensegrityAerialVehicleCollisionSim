@@ -29,8 +29,8 @@ class prop_guard_animator():
         for i in range(self.prop_guard.nodeNum):
             nodes[i]._offsets3d = (nodePosHist[iteration,i,0:1], nodePosHist[iteration,i,1:2], nodePosHist[iteration,i,2:])
         
-        for j in range(len(self.prop_guard.links)):
-            b,e = self.prop_guard.links[j]
+        for j in range(len(self.prop_guard.rods)):
+            b,e = self.prop_guard.rods[j]
             rod[j].set_data([nodePosHist[iteration,b,0],nodePosHist[iteration,e,0]], [nodePosHist[iteration,b,1],nodePosHist[iteration,e,1]])
             rod[j].set_3d_properties([nodePosHist[iteration,b,2],nodePosHist[iteration,e,2]])
         return nodes, rod
@@ -70,7 +70,7 @@ class prop_guard_animator():
         nodes = [self.ax.scatter(nodePosHist[0,i,0:1], nodePosHist[0,i,1:2], nodePosHist[0,i,2:]) for i in range(self.prop_guard.nodeNum)]
 
         rod = []
-        for b,e in self.prop_guard.links:
+        for b,e in self.prop_guard.rods:
             rod.append(self.ax.plot([nodePosHist[0,b,0],nodePosHist[0,e,0]], [nodePosHist[0,b,1],nodePosHist[0,e,1]], [nodePosHist[0,b,2],nodePosHist[0,e,2]], 'b-')[0])
 
         # Number of iterations

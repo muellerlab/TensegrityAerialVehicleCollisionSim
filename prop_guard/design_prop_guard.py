@@ -47,9 +47,9 @@ class prop_guard_design():
         qM = self.param.mQuad/4
         self.massList = np.array([sM, qM, sM, qM, sM, sM, qM, qM, sM])
 
-        # The link is defined as a rod piece connecting two nodes. 
-        # Each link is modelled as a linear spring-damper pair 
-        self.links = [
+        # The rod is defined as a rod piece connecting two nodes. 
+        # Each rod is modelled as a linear spring-damper pair 
+        self.rods = [
             [0, 1], 
             [1, 2], 
             [2, 3],
@@ -59,7 +59,7 @@ class prop_guard_design():
             [2, 7],
             [7, 8]]
 
-        # Assume every two neighboring links are connected with a torque spring-damper pair
+        # Assume every two neighboring rods are connected with a torque spring-damper pair
         self.joints = [
             [0,1,2],
             [1,2,3],
@@ -73,9 +73,14 @@ class prop_guard_design():
                            [7,2,3],
                            [1,2,7]] #4 cross joints
 
-        self.dRod = self.param.dRod
-        self.dJoint = self.param.dJoint
-        self.dCrossJoint = self.dJoint
+        if self.param.dampingCase ==1:
+            self.dRodList = self.param.dRod * np.ones(len(self.rods))
+            self.dJointList = self.param.dJoint * np.ones(len(self.joints))
+            self.dCrossJointList = self.param.dJoint * np.ones(len(self.crossJoints))
+        else:
+            self.dRodList = np.zeros(len(self.rods))
+            self.dJointList = np.zeros(len(self.joints))
+            self.dCrossJointList = np.zeros(len(self.crossJoints))
         pass
     
     def get_pos_from_comparable_tensegrity(self,propPos):
@@ -84,7 +89,6 @@ class prop_guard_design():
         self.nodePosList[7,:] = propPos[3,:]
         self.nodePosList[3,:] = propPos[2,:]
         self.nodePosList[6,:] = propPos[0,:]
-
         self.nodePosList[0,:] = self.nodePosList[1,:]*(propR+np.linalg.norm(self.nodePosList[1,:]))/(np.linalg.norm(self.nodePosList[1,:]))
         self.nodePosList[8,:] = self.nodePosList[7,:]*(propR+np.linalg.norm(self.nodePosList[7,:]))/(np.linalg.norm(self.nodePosList[7,:]))
         self.nodePosList[4,:] = self.nodePosList[3,:]*(propR+np.linalg.norm(self.nodePosList[3,:]))/(np.linalg.norm(self.nodePosList[3,:]))
@@ -116,29 +120,42 @@ class prop_guard_design():
         self.rA = rV/self.rL
         self.rR = np.sqrt(self.rA/np.pi) 
 
-        self.linkLength = np.zeros(len(self.links))
-        self.kLinkList = np.zeros(len(self.links))
-        for i in range(len(self.links)):
-            [b,e] = self.links[i]
-            self.linkLength[i] = np.linalg.norm(self.nodePosList[b] - self.nodePosList[e])
-            self.kLinkList[i] = self.param.rE*self.rA/(self.linkLength[i])
-        self.baseLengthList = self.linkLength # list of each length components
+        self.rodLength = np.zeros(len(self.rods))
+        self.kRodList = np.zeros(len(self.rods))
+        for i in range(len(self.rods)):
+            [b,e] = self.rods[i]
+            self.rodLength[i] = np.linalg.norm(self.nodePosList[b] - self.nodePosList[e])
+            self.kRodList[i] = self.param.rE*self.rA/(self.rodLength[i])
 
+            if self.param.dampingCase == 0:
+                eqMass = (self.massList[b] + self.massList[e])/2
+                self.dRodList[i] = 2*np.sqrt(self.kRodList[i]*eqMass)
+
+        self.baseLengthList = self.rodLength # list of each length components
         self.kJointList = np.zeros(len(self.joints))
         self.kJointStressList = np.zeros(len(self.joints)) # Coefficient for max stress at the joint node. 
         for i in range(len(self.joints)):
             [b,m,e] = self.joints[i]
-            jointLength = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m]) +  np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            lbm = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m])
+            lme = np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            jointLength = lbm + lme
             jointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
             self.kJointStressList[i] = self.kJointList[i]*self.rR/jointI # stress = Moment*r/I
+            if self.param.dampingCase == 0:
+                eqJ = (self.massList[b]*lbm**2 + self.massList[e]*lme**2)/2 #Equivalent mass moment of inertia
+                self.dJointList[i] = 2*np.sqrt(self.kJointList[i]*eqJ)
 
         self.kCrossJointList = np.zeros(len(self.crossJoints))
         self.kCrossJointStressList = np.zeros(len(self.crossJoints)) # Coefficient for max stress at the crossjoint node. 
         for i in range(len(self.crossJoints)):
             [b,m,e] = self.crossJoints[i]
-            crossJointLength = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m]) +  np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            lbm = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m])
+            lme = np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            crossJointLength = lbm + lme            
             crossJointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kCrossJointList[i] = crossJointI*self.param.rE/(crossJointLength) # moment ~= k*theta, where theta is the bending angle. 
             self.kCrossJointStressList[i] = self.kCrossJointList[i]*self.rR/crossJointI # stress = Moment*r/I
-        
+            if self.param.dampingCase == 0:
+                eqJ = (self.massList[b]*lbm**2 + self.massList[e]*lme**2)/2 #Equivalent mass moment of inertia
+                self.dCrossJointList[i] = 2*np.sqrt(self.kJointList[i]*eqJ)
