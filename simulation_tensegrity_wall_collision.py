@@ -56,13 +56,13 @@ for i in range(nodeNum):
     defaultPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-att = Rotation.from_euler_YPR([0,-np.pi/4,0])
+att = Rotation.from_euler_YPR([0,0*-np.pi/4,0])
 initPos = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
 
 # Offset the vehicle so it is touching wall at the beginning of the simulation
-offset = np.min(initPos[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+offset = np.min(initPos[:,0]) - 1e-6 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
 initVel = np.zeros_like(tensegrity.nodePos)  
 for i in range(nodeNum):
     initPos[i] = initPos[i] - offset * np.array([1,0,0])

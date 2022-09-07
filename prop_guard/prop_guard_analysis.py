@@ -20,7 +20,6 @@ class prop_guard_analysis():
         self.kJointList =prop_guard_ode.kJointList
         self.kJointStressList =prop_guard_ode.kJointStressList
         self.dJoint =prop_guard_ode.dJoint
-
         self.crossJoints = prop_guard_ode.crossJoints
         self.kCrossJointList = prop_guard_ode.kCrossJointList
         self.dCrossJoint = prop_guard_ode.dCrossJoint
@@ -121,7 +120,8 @@ class prop_guard_analysis():
             crossJointInfo[cjID, 1] = omega0+omega2 
             crossJointInfo[cjID, 2] = M_spring 
             crossJointInfo[cjID, 3] = M_damping
-            crossJointInfo[cjID, 4] = (theta-np.pi/2)*self.kCrossJointStressList[cjID] # stress due to bending at the joint
+            # stress due to bending at the cross joint. It should always be positive, despite delta angle might be negative due to definition 
+            crossJointInfo[cjID, 4] = np.abs((theta-np.pi/2))*self.kCrossJointStressList[cjID] 
         return crossJointInfo
 
     def compute_link_force(self,nodePos):
@@ -144,22 +144,24 @@ class prop_guard_analysis():
         # We compute the max stress each node is under. (Notice that stress on both sides of the node might be different)
         nodeMaxStress = np.zeros(self.nodeNum)
         for nodeID in range(self.nodeNum):
-            linkStressList = []
+            linkStressList = [0] #Default 0 stress
             for i in range(len(self.links)):
                 if nodeID in self.links[i]:
                     linkStressList.append(np.abs(linkStress[i]))
-            nodeMaxStress[nodeID] = np.max(linkStressList)
 
+            jointStressList = [0] #Default zero stress
             for jointID in range(len(self.joints)):
                 if nodeID == self.joints[jointID][1]:
-                    nodeMaxStress[nodeID] += np.abs(jointStress[jointID])
+                    jointStressList.append(np.abs(jointStress[jointID]))
+            
         
-        if not (crossJointStress is None):
-            for i in range(len(self.crossJoints)):
-                nodeID = self.crossJoints[i][1]
-                if crossJointStress[i] > nodeMaxStress[nodeID]:
-                    nodeMaxStress[nodeID] = crossJointStress[i] # if cross joint stress is larger, overwrite the node stress with the larger one
+            if not (crossJointStress is None):
+                for crossjointID in range(len(self.crossJoints)):
+                    if nodeID == self.crossJoints[crossjointID][1]:
+                        jointStressList.append(np.abs(crossJointStress[crossjointID]))
 
+
+            nodeMaxStress[nodeID] = max(linkStressList) + max(jointStressList)
         return nodeMaxStress
 
     def compute_joint_forces_for_record(self, nodes, vels, returnStress = False):

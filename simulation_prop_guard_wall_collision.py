@@ -46,13 +46,14 @@ for i in range(nodeNum):
     defaultPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-att = Rotation.from_euler_YPR([0,-np.pi/4,0])
+# att = Rotation.from_euler_YPR([0,-np.pi/4,0])
+att = Rotation.from_euler_YPR([0,0,0])
 initPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
 
 # Offset the vehicle so it is touching wall at the beginning of the simulation
-offset = np.min(initPos[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+offset = np.min(initPos[:,0]) - 1e-6 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
 initVel = np.zeros_like(prop_guard.nodePosList)  
 for i in range(nodeNum):
     initPos[i] = initPos[i] - offset * np.array([1,0,0])
@@ -87,6 +88,12 @@ jointAngleHist = np.zeros((stepCount,len(joints)))
 jointAngularRateHist = np.zeros((stepCount,len(joints)))
 jointSpringMomentHist = np.zeros((stepCount,len(joints)))
 jointDampingMomentHist = np.zeros((stepCount,len(joints)))
+
+crossJointAngleHist = np.zeros((stepCount,len(crossJoints)))
+crossJointAngularRateHist = np.zeros((stepCount,len(crossJoints)))
+crossJointSpringMomentHist = np.zeros((stepCount,len(crossJoints)))
+crossJointDampingMomentHist = np.zeros((stepCount,len(crossJoints)))
+
 linkStressHist = np.zeros((stepCount,len(links)))
 jointStressHist = np.zeros((stepCount,len(joints)))
 crossJointStressHist = np.zeros((stepCount,len(crossJoints)))
@@ -105,7 +112,13 @@ for i in range(stepCount):
     jointSpringMomentHist[i,:] = jointInfo_i[:,2]
     jointDampingMomentHist[i,:] = jointInfo_i[:,3]
     jointStressHist[i,:] = jointInfo_i[:,4]
-    crossJointStressHist[i,:] =crossJointInfo_i[:,4]
+
+    crossJointAngleHist[i,:] = crossJointInfo_i[:,0]
+    crossJointAngularRateHist[i,:] = crossJointInfo_i[:,1]
+    crossJointSpringMomentHist[i,:] = crossJointInfo_i[:,2]
+    crossJointDampingMomentHist[i,:] = crossJointInfo_i[:,3]
+    crossJointStressHist[i,:] = crossJointInfo_i[:,4]
+    
     linkStressHist[i,:] = prop_guard_helper.compute_link_stress(nodePosHist[i])
     nodeMaxStressHist[i,:] = prop_guard_helper.compute_node_max_stress(linkStressHist[i], jointStressHist[i,:],crossJointStressHist[i,:])
     extForceHist[i,:] = prop_guard_helper.compute_wall_collision_force(nodePosHist[i],nWall, kWall, pWall)
@@ -181,6 +194,10 @@ if drawDebugPlots:
     for j in range(len(joints)):
         fig5.axes[0].plot(tHist, jointAngleHist[:,j], '-', label='angleJoint'+str(j))
         fig5.axes[1].plot(tHist, jointAngularRateHist[:,j], '-', label='omegaJoint'+str(j))
+    for j in range(len(crossJoints)):
+        fig5.axes[0].plot(tHist, crossJointAngleHist[:,j], '-', label='angleCrossJoint'+str(j))
+        fig5.axes[1].plot(tHist, crossJointAngularRateHist[:,j], '-', label='omegaCrossJoint'+str(j))
+
     fig5.axes[0].set_ylabel('Angle [Rad]')
     fig5.axes[1].set_ylabel('Angular Rate [Rad/s]')
     fig5.axes[0].set_xlabel('Time [s]')

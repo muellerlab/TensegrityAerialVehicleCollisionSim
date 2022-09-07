@@ -16,10 +16,13 @@ from tensegrity.animate_tensegrity import *
 
 from scipy.integrate import odeint, solve_ivp
 
+import pickle
+
 import seaborn as sns
 sns.set_theme()
 
-folderName = "compareStudyResult/" # Name of the folder storing the data
+# folderName = "compareStudyResult/" # Name of the folder storing the data
+folderName = "simResult/" # Name of the folder storing the data
 
 # Setup tensegrity info
 param = design_param()
@@ -40,7 +43,7 @@ dim_p = prop_guard.dim
 joints_p = prop_guard.joints
 links_p = prop_guard.links
 
-sectionNum = 30  #50
+sectionNum = 30 #30  #50
 theta0 = np.linspace(0, np.pi/2, sectionNum)
 theta1 = np.linspace(0, np.pi/2, sectionNum)
 X = np.zeros((sectionNum,sectionNum))
@@ -60,8 +63,15 @@ for angleIdx0 in range (sizeTheta0):
         Y[angleIdx0,angleIdx1] = theta1[angleIdx1]
 
         print("TestID:",(angleIdx0,angleIdx1))
-        Ps_p = np.genfromtxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-        tHist_p = np.genfromtxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+        # Ps_p = np.genfromtxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+        # tHist_p = np.genfromtxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+
+        file_p = open(folderName+"prop"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'rb')
+        data_p = pickle.load(file_p)
+        file_p.close()
+        Ps_p = data_p["P"]
+        tHist_p = data_p["t"]
+
         stepCount_p = tHist_p.shape[0]
         nodePosHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
         nodeVelHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
@@ -76,13 +86,20 @@ for angleIdx0 in range (sizeTheta0):
         
         for i in range(stepCount_p):
             jointStress_i = prop_guard_helper.compute_joint_angle_and_torque(nodePosHist_p[i],nodeVelHist_p[i])[:,4]
+            crossJointStress_i = prop_guard_helper.compute_cross_joint_angle_and_torque(nodePosHist_p[i],nodeVelHist_p[i])[:,4]
             linkStress_i= prop_guard_helper.compute_link_stress(nodePosHist_p[i])
-            nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(linkStress_i, jointStress_i)
+            nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(linkStress_i, jointStress_i,crossJointStress_i)
         propGuardMaxStress[angleIdx0,angleIdx1]=np.max(nodeMaxStressHist_p.flatten())
 
         # Find max stress in tensegrity
-        Ps_t = np.genfromtxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-        tHist_t = np.genfromtxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+        # Ps_t = np.genfromtxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+        # tHist_t = np.genfromtxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
+
+        file_t = open(folderName+"ten"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'rb')
+        data_t = pickle.load(file_t)
+        file_t.close()
+        Ps_t = data_t["P"]
+        tHist_t = data_t["t"]
 
         stepCount_t = tHist_t.shape[0]
         nodePosHist_t = np.zeros((stepCount_t,nodeNum_t,dim_t))
@@ -104,7 +121,7 @@ for angleIdx0 in range (sizeTheta0):
 print(np.mean(propGuardMaxStress))
 print(np.mean(tensegrityMaxStress))
 
-plotType = "heatmap"
+plotType = "3d"
 if plotType == "heatmap":
     # Creating figure
     n = 600 # level of contours

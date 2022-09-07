@@ -15,12 +15,13 @@ from tensegrity.tensegrity_analysis import *
 from tensegrity.animate_tensegrity import *
 
 from scipy.integrate import odeint, solve_ivp
+import pickle
 
 import seaborn as sns
 sns.set_theme()
 
 # Folder
-folderName = "compareStudy3/"
+folderName = "simResult/"
 # Setup wall 
 nWall = Vec3(1,0,0)
 Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
@@ -31,10 +32,10 @@ pWall = Vec3(0,0,0)
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.03 # [s] Simulation time
+tf = 0.035 # [s] Max simulation time
 tF = tf # [s] Duration of collision
 t_span = (t0,tf)
-initVel = 5 #[m/s]
+speed = 5 #[m/s]
 
 # Setup tensegrity
 param = design_param()
@@ -78,7 +79,6 @@ sectionNum = 30 #50
 
 theta0 = np.linspace(0, np.pi/2, sectionNum)
 theta1 = np.linspace(0, np.pi/2, sectionNum)
-
 X, Y = np.meshgrid(theta0, theta1)
 
 sizeTheta0 = theta0.shape[0]
@@ -86,7 +86,7 @@ sizeTheta1 = theta1.shape[0]
 
 propGuardMaxStress = np.zeros((sizeTheta0,sizeTheta1))
 tensegrityMaxStress = np.zeros((sizeTheta0,sizeTheta1))
-speed = 5 #[m/s]
+
 
 plotFlag = False
 
@@ -103,7 +103,7 @@ for angleIdx0 in range (sectionNum):
         for i in range(nodeNum_p):
             initPos_p[i] = (att*Vec3(defaultPos_p[i])).to_array().squeeze()
         # Offset the vehicle so it is touching wall at the beginning of the simulation
-        offset_p = np.min(initPos_p[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+        offset_p = np.min(initPos_p[:,0]) - 1e-6 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
         for i in range(nodeNum_p):
             initPos_p[i] = initPos_p[i]- offset_p * np.array([1,0,0])
             initVel_p[i] = speed*Vec3(-1,0,0).to_array().squeeze()
@@ -111,11 +111,17 @@ for angleIdx0 in range (sectionNum):
         P_p[nodeNum_p*dim_p:] = initVel_p.reshape((nodeNum_p*dim_p,))        
         
         prop_guard_ODE =prop_guard_ode(prop_guard)
-        sol_p = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P_p, method='Radau',args=(nWall, kWall, pWall),events=prop_guard_ODE.wall_check_simple)
+        sol_p = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P_p, method='Radau',args=(nWall, kWall, pWall),events=prop_guard_ODE.vel_check_simple)
         tHist_p = sol_p.t
         Ps_p= sol_p.y
-        np.savetxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.t, delimiter=",")
-        np.savetxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.y, delimiter=",")
+
+        simResult_p=dict({"P":Ps_p, "t":tHist_p}) 
+        file = open(folderName+"prop"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'wb')
+        pickle.dump(simResult_p, file)
+        file.close()
+
+        # np.savetxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.t, delimiter=",")
+        # np.savetxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.y, delimiter=",")
 
         if plotFlag:
             stepCount_p = tHist_p.shape[0]
@@ -142,7 +148,7 @@ for angleIdx0 in range (sectionNum):
         initVel_t = np.zeros_like(initPos_t)
         for i in range(nodeNum_t):
             initPos_t[i] = (att*Vec3(defaultPos_t[i])).to_array().squeeze()
-        offset_t = np.min(initPos_t[:,0]) - 1e-10 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+        offset_t = np.min(initPos_t[:,0]) - 1e-6 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
         for i in range(nodeNum_t):
             initPos_t[i] = initPos_t[i] - offset_t * np.array([1,0,0])
             initVel_t[i] = speed*Vec3(-1,0,0).to_array().squeeze()
@@ -150,11 +156,17 @@ for angleIdx0 in range (sectionNum):
         P_t[nodeNum_t*dim_t:] = initVel_t.reshape((nodeNum_t*dim_t,))        
 
         tensegrity_ODE =tensegrity_ode(tensegrity)
-        sol_t = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P_t, method='Radau',args=(nWall, kWall, pWall),events=tensegrity_ODE.wall_check_simple)
+        sol_t = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P_t, method='Radau',args=(nWall, kWall, pWall),events=tensegrity_ODE.vel_check_simple)
         tHist_t = sol_t.t
         Ps_t= sol_t.y
-        np.savetxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.t, delimiter=",")
-        np.savetxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.y, delimiter=",")
+
+        simResult=dict({"P":Ps_t, "t":tHist_t}) 
+        file = open(folderName+"ten"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'wb')
+        pickle.dump(simResult, file)
+        file.close()
+
+        # np.savetxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.t, delimiter=",")
+        # np.savetxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.y, delimiter=",")
         
         if plotFlag:
             stepCount_t = tHist_t.shape[0]

@@ -34,16 +34,11 @@ class design_param():
         Meanwhile, the prop guard is the smallest possible design to frame the propellers so they don't ht each other. 
 
         """
-        # self.designCase = 1
-        # self.dString = 500 #[N/(m/s)] 
-        # self.dRod = 500 #[N/(m/s)]
-        # self.dJoint = 0.5 #[Nm/(rad/s)] Rotational damping constant
-
 
         self.designCase = 1
-        self.dString = 500 #[N/(m/s)] 
-        self.dRod = 500 #[N/(m/s)]
-        self.dJoint = 0.1 #[Nm/(rad/s)] Rotational damping constant
+        self.dString = 1000 #[N/(m/s)] 
+        self.dRod = 1000 #[N/(m/s)]
+        self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
 
         # self.dString = 100 #[N/(m/s)] 
         # self.dRod = 100 #[N/(m/s)]
