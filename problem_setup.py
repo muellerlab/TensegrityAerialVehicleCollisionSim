@@ -40,7 +40,7 @@ class design_param():
         0: pair each stiffness member with a critical damper
         1: specify damping for string, rod and joints
         """
-        self.dampingCase = 1
+        self.dampingCase = 0
 
         if self.dampingCase ==1:
             self.dString = 1000 #[N/(m/s)] 

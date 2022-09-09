@@ -250,7 +250,7 @@ class tensegrity_design():
             
             root = fsolve(self.funcRod, [rM/(self.param.rRho*6*rLPreSS), rLPreSS], args=(rM, self.param.rRho, rLPreSS, self.param.rE, rPreT))
             self.rA = root[0] # cross sectional area
-            rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
+            self.rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
             self.rL = root[1] # no-stress string length
             rPreStrain = (self.rL-rLPreSS)/self.rL
 
@@ -276,8 +276,8 @@ class tensegrity_design():
         self.kJointStressList = np.zeros(len(self.joints))
         for i in range(len(self.joints)):
             [b,m,e] = self.joints[i]
-            lbm = np.linalg.norm(self.nodePosList[b] - self.nodePosList[m])
-            lme = np.linalg.norm(self.nodePosList[m] - self.nodePosList[e])
+            lbm = np.linalg.norm(compressedNodePos[b] - compressedNodePos[m])
+            lme = np.linalg.norm(compressedNodePos[m] - compressedNodePos[e])
             jointLength = lbm + lme
             jointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
@@ -286,6 +286,13 @@ class tensegrity_design():
                 eqJ = (self.massList[b]*lbm**2 + self.massList[e]*lme**2)/2 #Equivalent mass moment of inertia
                 self.dJointList[i] = 2*np.sqrt(self.kJointList[i]*eqJ)
 
+        # length ratio between string and rod in a self-stressed tensegrity
+        gamma_l = np.linalg.norm(self.unitNodePos[self.strings[0][0]]-self.unitNodePos[self.strings[0][1]])/np.linalg.norm(self.unitNodePos[self.fullRods[0][0]]-self.unitNodePos[self.fullRods[0][1]]) 
+        sLPreSS = rLPreSS * gamma_l # length of string under pre-tension
+        root = fsolve(self.funcString, [sM/(self.param.sRho*24*sLPreSS), sLPreSS], args=(sM, self.param.sRho, sLPreSS, self.param.sE, self.param.sPreT))
+        sA = root[0] # cross sectional area
+        self.sL0 = root[1] # no-stress string length
+
         self.kString = self.param.sE*sA/self.sL0
         if self.param.dampingCase == 0:
             #Notice that all strings are identical
@@ -293,13 +300,6 @@ class tensegrity_design():
             e = self.strings[0][1]
             eqMass = (self.massList[b] + self.massList[e])/2
             self.dString =  2*np.sqrt(eqMass*self.kString)
-
-        # length ratio between string and rod in a self-stressed tensegrity
-        gamma_l = np.linalg.norm(self.unitNodePos[self.strings[0][0]]-self.unitNodePos[self.strings[0][1]])/np.linalg.norm(self.unitNodePos[self.fullRods[0][0]]-self.unitNodePos[self.fullRods[0][1]]) 
-        sLPreSS = rLPreSS * gamma_l # length of string under pre-tension
-        root = fsolve(self.funcString, [sM/(self.param.sRho*24*sLPreSS), sLPreSS], args=(sM, self.param.sRho, sLPreSS, self.param.sE, self.param.sPreT))
-        sA = root[0] # cross sectional area
-        self.sL0 = root[1] # no-stress string length
 
         self.nodePos = compressedNodePos 
         self.propPos = compressedPropPos

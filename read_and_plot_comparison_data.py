@@ -15,13 +15,11 @@ from tensegrity.tensegrity_analysis import *
 from tensegrity.animate_tensegrity import *
 
 from scipy.integrate import odeint, solve_ivp
-
 import pickle
 
 import seaborn as sns
 sns.set_theme()
 
-# folderName = "compareStudyResult/" # Name of the folder storing the data
 folderName = "simResult/" # Name of the folder storing the data
 
 # Setup tensegrity info
@@ -41,7 +39,7 @@ prop_guard.design()
 nodeNum_p = prop_guard.nodeNum
 dim_p = prop_guard.dim
 joints_p = prop_guard.joints
-links_p = prop_guard.links
+rods_p = prop_guard.rods
 
 sectionNum = 30 #30  #50
 theta0 = np.linspace(0, np.pi/2, sectionNum)
@@ -75,7 +73,7 @@ for angleIdx0 in range (sizeTheta0):
         stepCount_p = tHist_p.shape[0]
         nodePosHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
         nodeVelHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
-        linkForceHist_p = np.zeros((stepCount_p,len(links_p)))
+        rodForceHist_p = np.zeros((stepCount_p,len(rods_p)))
         nodeMaxStressHist_p = np.zeros((stepCount_p,nodeNum_p))
         prop_guard_helper = prop_guard_analysis(prop_guard_ODE)
 
@@ -87,14 +85,11 @@ for angleIdx0 in range (sizeTheta0):
         for i in range(stepCount_p):
             jointStress_i = prop_guard_helper.compute_joint_angle_and_torque(nodePosHist_p[i],nodeVelHist_p[i])[:,4]
             crossJointStress_i = prop_guard_helper.compute_cross_joint_angle_and_torque(nodePosHist_p[i],nodeVelHist_p[i])[:,4]
-            linkStress_i= prop_guard_helper.compute_link_stress(nodePosHist_p[i])
-            nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(linkStress_i, jointStress_i,crossJointStress_i)
+            rodStress_i= prop_guard_helper.compute_rod_stress(nodePosHist_p[i])
+            nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(rodStress_i, jointStress_i,crossJointStress_i)
         propGuardMaxStress[angleIdx0,angleIdx1]=np.max(nodeMaxStressHist_p.flatten())
 
         # Find max stress in tensegrity
-        # Ps_t = np.genfromtxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-        # tHist_t = np.genfromtxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-
         file_t = open(folderName+"ten"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'rb')
         data_t = pickle.load(file_t)
         file_t.close()
@@ -118,10 +113,14 @@ for angleIdx0 in range (sizeTheta0):
             nodeMaxStressHist_t[i] = tensegrity_helper.compute_node_max_stress(rodStressHist_t[i], jointStress_i)
         tensegrityMaxStress[angleIdx0,angleIdx1]=np.max(nodeMaxStressHist_t.flatten())
 
-print(np.mean(propGuardMaxStress))
-print(np.mean(tensegrityMaxStress))
+print("meanPropGuardStress=", np.mean(propGuardMaxStress))
+print("meanTensegrity=", np.mean(tensegrityMaxStress))
+print("maxPropGuardStress=", np.max(propGuardMaxStress))
+print("maxTensegrity=", np.max(tensegrityMaxStress))
 
-plotType = "3d"
+
+plotType = "heatmap"
+
 if plotType == "heatmap":
     # Creating figure
     n = 600 # level of contours
@@ -131,8 +130,10 @@ if plotType == "heatmap":
 
 
     fig1, axs = plt.subplots(nrows=1,ncols=2, figsize=(8,8),sharex='col', sharey='row')
-    (ax1, ax2) = axs
 
+    (ax1, ax2) = axs
+    ax1.grid(False)
+    ax2.grid(False)
     levels = np.linspace(vmin, vmax, n+1)
 
     cs1 = ax1.contourf(X, Y, propGuardMaxStress, cmap = 'plasma',levels = levels)
@@ -144,10 +145,14 @@ if plotType == "heatmap":
 
     cs2 = ax2.contourf(X, Y, tensegrityMaxStress, cmap = 'plasma',levels = levels)
     ax2.set_xlabel('Initial Yaw (rad)', fontsize=18)
+    ax2.set_ylabel('Initial Pitch (rad)', fontsize=18)
     ax2.tick_params(labelsize=18)
     ax2.set_title('Max Stress:Tensegrity', fontsize=18)
     ax2.set_aspect('equal')
-    fig1.colorbar(cs2, ax=axs.ravel().tolist(),orientation='horizontal')
+
+    cbar = fig1.colorbar(cs2, ax=axs.ravel().tolist(),orientation='horizontal')
+    cbar.ax.tick_params(labelsize=15)
+
     plt.show()
 
 elif plotType == "3d":
@@ -156,7 +161,6 @@ elif plotType == "3d":
 
     surf = ax.plot_surface(X, Y, propGuardMaxStress, cmap='Oranges',
                         linewidth=0, antialiased=False)
-
     surf = ax.plot_surface(X, Y, tensegrityMaxStress, cmap='Blues',
                         linewidth=0, antialiased=False)
 

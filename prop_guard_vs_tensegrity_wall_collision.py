@@ -19,7 +19,6 @@ import pickle
 
 import seaborn as sns
 sns.set_theme()
-
 # Folder
 folderName = "simResult/"
 # Setup wall 
@@ -65,7 +64,7 @@ prop_guard.design()
 nodeNum_p = prop_guard.nodeNum
 dim_p = prop_guard.dim
 joints_p = prop_guard.joints
-links_p = prop_guard.links
+rods_p = prop_guard.rods
 massList_p = prop_guard.massList
 
 # Rotate the whole tensegrity
@@ -86,8 +85,6 @@ sizeTheta1 = theta1.shape[0]
 
 propGuardMaxStress = np.zeros((sizeTheta0,sizeTheta1))
 tensegrityMaxStress = np.zeros((sizeTheta0,sizeTheta1))
-
-
 plotFlag = False
 
 for angleIdx0 in range (sectionNum):
@@ -120,14 +117,11 @@ for angleIdx0 in range (sectionNum):
         pickle.dump(simResult_p, file)
         file.close()
 
-        # np.savetxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.t, delimiter=",")
-        # np.savetxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_p.y, delimiter=",")
-
         if plotFlag:
             stepCount_p = tHist_p.shape[0]
             nodePosHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
             nodeVelHist_p = np.zeros((stepCount_p,nodeNum_p,dim_p))
-            linkForceHist_p = np.zeros((stepCount_p,len(links_p)))
+            rodForceHist_p = np.zeros((stepCount_p,len(rods_p)))
             nodeMaxStressHist_p = np.zeros((stepCount_p,nodeNum_p))
             prop_guard_helper = prop_guard_analysis(prop_guard_ODE)
 
@@ -138,8 +132,8 @@ for angleIdx0 in range (sectionNum):
             
             for i in range(stepCount_p):
                 jointStress_i = prop_guard_helper.compute_joint_angle_and_torque(nodePosHist_p[i],nodeVelHist_p[i])[:,4]
-                linkStress_i= prop_guard_helper.compute_link_stress(nodePosHist_p[i])
-                nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(linkStress_i, jointStress_i)
+                rodStress_i= prop_guard_helper.compute_rod_stress(nodePosHist_p[i])
+                nodeMaxStressHist_p[i] = prop_guard_helper.compute_node_max_stress(rodStress_i, jointStress_i)
             propGuardMaxStress[angleIdx0,angleIdx1]=np.max(nodeMaxStressHist_p.flatten())
 
         # Find max stress in tensegrity
@@ -165,9 +159,6 @@ for angleIdx0 in range (sectionNum):
         pickle.dump(simResult, file)
         file.close()
 
-        # np.savetxt(folderName+"ten_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.t, delimiter=",")
-        # np.savetxt(folderName+"ten_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", sol_t.y, delimiter=",")
-        
         if plotFlag:
             stepCount_t = tHist_t.shape[0]
             nodePosHist_t = np.zeros((stepCount_t,nodeNum_t,dim_t))
