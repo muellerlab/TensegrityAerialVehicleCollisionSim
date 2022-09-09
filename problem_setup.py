@@ -23,9 +23,8 @@ class design_param():
         self.sD = 1e-3  #[m] diameter of string 
         self.gamma_m = 20 # ratio between mass of rod and string 
         self.sPreT = 20  # [N] string pre-tension force
-
         """
-        Two different ways to design vehicles: 
+        Two ways to design vehicles: 
 
         0: Given propeller size, assume that the propeller placement is symmetrical, find shortest rod length that can enclose it.
         Meanwhile, the prop guard protects the same vehicle put on tensegrtiy
@@ -34,11 +33,19 @@ class design_param():
         Meanwhile, the prop guard is the smallest possible design to frame the propellers so they don't ht each other. 
 
         """
-
         self.designCase = 1
-        self.dString = 1000 #[N/(m/s)] 
-        self.dRod = 1000 #[N/(m/s)]
-        self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
+
+        """
+        Two ways to model damping in the system:
+        0: pair each stiffness member with a critical damper
+        1: specify damping for string, rod and joints
+        """
+        self.dampingCase = 0
+
+        if self.dampingCase ==1:
+            self.dString = 1000 #[N/(m/s)] 
+            self.dRod = 1000 #[N/(m/s)]
+            self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
 
         # self.dString = 100 #[N/(m/s)] 
         # self.dRod = 100 #[N/(m/s)]

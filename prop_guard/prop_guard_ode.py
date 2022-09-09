@@ -13,19 +13,19 @@ class prop_guard_ode():
         self.prop_guard = prop_guard
         self.nodeNum = prop_guard.nodeNum
         self.dim = prop_guard.dim
-        self.links = prop_guard.links
-        self.dRod = prop_guard.dRod
-        self.kLinkList = prop_guard.kLinkList
+        self.rods = prop_guard.rods
+        self.dRodList = prop_guard.dRodList
+        self.kRodList = prop_guard.kRodList
         self.rL = prop_guard.rL
 
         self.joints = prop_guard.joints
         self.kJointList = prop_guard.kJointList
-        self.dJoint = prop_guard.dJoint
+        self.dJointList = prop_guard.dJointList
         self.kJointStressList = prop_guard.kJointStressList
 
         self.crossJoints = prop_guard.crossJoints
         self.kCrossJointList = prop_guard.kCrossJointList
-        self.dCrossJoint = prop_guard.dCrossJoint
+        self.dCrossJointList = prop_guard.dCrossJointList
         self.kCrossJointStressList = prop_guard.kCrossJointStressList
 
 
@@ -43,11 +43,11 @@ class prop_guard_ode():
         if crossJointFlag:
             joint = self.crossJoints[jointID]
             k = self.kCrossJointList[jointID]
-            d = self.dCrossJoint
+            d = self.dCrossJointList[jointID]
         else:
             joint = self.joints[jointID]
             k = self.kJointList[jointID]
-            d = self.dJoint
+            d = self.dJointList[jointID]
 
         n0 = nodes[joint[0]]
         n1 = nodes[joint[1]]
@@ -104,8 +104,8 @@ class prop_guard_ode():
         rotF = np.zeros_like(nodes) # spring and damping force due to the relative rotaiton of springs 
         
         for node in range(self.nodeNum):
-            for i in range(len(self.links)):
-                r = self.links[i]
+            for i in range(len(self.rods)):
+                r = self.rods[i]
                 if node in r:
                     # direction of rod:
                     e = nodes[r[0]] - nodes[r[1]]
@@ -118,8 +118,8 @@ class prop_guard_ode():
                         vbE = vels[r[0]]
                     l = np.linalg.norm(e)  # current length
                     vab = vaE - vbE
-                    dampF[node] += -self.dRod*(vab.dot(e/l))*(e/l) 
-                    springF[node] += self.kLinkList[i] * (l-self.baseLengthList[i])*e/l
+                    dampF[node] += -self.dRodList[i]*(vab.dot(e/l))*(e/l) 
+                    springF[node] += self.kRodList[i] * (l-self.baseLengthList[i])*e/l
 
         for jointID in range(len(self.joints)):
             [F0, F1, F2] =  self.compute_joint_forces(nodes,vels,jointID)

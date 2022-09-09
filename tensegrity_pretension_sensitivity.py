@@ -30,11 +30,6 @@ theta = np.linspace(0, np.pi/2, sectionNum)
 preTension = np.linspace(0,100,sectionNum)
 X, Y = np.meshgrid(theta, preTension)
 
-
-print(X)
-print(Y)
-
-
 sizeTheta = theta.shape[0]
 sizePretension = preTension.shape[0]
 tensegrityMaxStress = np.zeros((sizeTheta,sizePretension))
@@ -46,7 +41,6 @@ Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-pr
 Aw = 0.1*0.1 #[m^2], effective area of compression
 Lw = 3 #[m] thickness of wall
 kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
-
 
 
 for thetaIdx in range (sectionNum):

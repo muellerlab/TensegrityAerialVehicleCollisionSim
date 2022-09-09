@@ -21,9 +21,6 @@ class tensegrity_design():
         
         self.param = param
         self.propR = param.propR
-        self.dRod = param.dRod
-        self.dString = param.dString
-        self.dJoint = param.dJoint
 
         # 12 tensegrity nodes + 4 mass nodes representing quadcopter weight
         unitTensegrityNodes = np.array([
@@ -43,7 +40,6 @@ class tensegrity_design():
             ])
         COM = np.sum(unitTensegrityNodes[0:12,:],axis=0)/12
         self.unitNodePos = unitTensegrityNodes-COM # Move the unit node COM to [0,0,0]
-
         self.faces = self.get_faces(self.unitNodePos)
         self.strings = [
             [0, 4], 
@@ -98,7 +94,15 @@ class tensegrity_design():
             [4, 12, 13],
             [12, 13, 5],
             [6, 14, 15],
-            [14, 15, 7]]        
+            [14, 15, 7]]     
+
+        if self.param.dampingCase ==1:
+            self.dRodList = self.param.dRod * np.ones(len(self.rods))
+            self.dJointList = self.param.dJoint * np.ones(len(self.joints))
+            self.dString = self.param.dString
+        else:
+            self.dRodList = np.zeros(len(self.rods))
+            self.dJointList = np.zeros(len(self.joints))
         pass
 
     """
@@ -216,7 +220,6 @@ class tensegrity_design():
 
         # Assume the structure is made with six rods. Here we compute spec of each rod
         # We further assume that the change in cross sectional area due to deformation of pre-stress is negligible. 
-
         rM = self.param.mStructure*self.param.gamma_m/(1+self.param.gamma_m) # Total mass for rod 
         sM = self.param.mStructure/(1+self.param.gamma_m) # Total mass for string
         rV = (rM/self.param.rRho)/6 #[m^3] volume of each rod
@@ -247,7 +250,7 @@ class tensegrity_design():
             
             root = fsolve(self.funcRod, [rM/(self.param.rRho*6*rLPreSS), rLPreSS], args=(rM, self.param.rRho, rLPreSS, self.param.rE, rPreT))
             self.rA = root[0] # cross sectional area
-            rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
+            self.rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
             self.rL = root[1] # no-stress string length
             rPreStrain = (self.rL-rLPreSS)/self.rL
 
@@ -265,15 +268,23 @@ class tensegrity_design():
             e = self.rods[i][1]
             self.rodLength0List[i] = np.linalg.norm(compressedNodePos[b] - compressedNodePos[e])/(1-rPreStrain)
             self.kRodList[i] = self.param.rE*self.rA/self.rodLength0List[i]
+            if self.param.dampingCase == 0:
+                eqMass = (self.massList[b] + self.massList[e])/2
+                self.dRodList[i] =  2*np.sqrt(eqMass*self.kRodList[i])
 
         self.kJointList = np.zeros(len(self.joints))
         self.kJointStressList = np.zeros(len(self.joints))
         for i in range(len(self.joints)):
             [b,m,e] = self.joints[i]
-            jointLength = (np.linalg.norm(compressedNodePos[b] - compressedNodePos[m]) +  np.linalg.norm(compressedNodePos[m] - compressedNodePos[e]))/(1-rPreStrain)
-            jointI = (rR**4)*np.pi/4  #Second moment of area, assume cross sectional area is a circle
+            lbm = np.linalg.norm(compressedNodePos[b] - compressedNodePos[m])
+            lme = np.linalg.norm(compressedNodePos[m] - compressedNodePos[e])
+            jointLength = lbm + lme
+            jointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
-            self.kJointStressList[i] = self.kJointList[i]*rR/jointI # stress = Moment*r/I
+            self.kJointStressList[i] = self.kJointList[i]*self.rR/jointI # stress = Moment*r/I
+            if self.param.dampingCase == 0:
+                eqJ = (self.massList[b]*lbm**2 + self.massList[e]*lme**2)/2 #Equivalent mass moment of inertia
+                self.dJointList[i] = 2*np.sqrt(self.kJointList[i]*eqJ)
 
         # length ratio between string and rod in a self-stressed tensegrity
         gamma_l = np.linalg.norm(self.unitNodePos[self.strings[0][0]]-self.unitNodePos[self.strings[0][1]])/np.linalg.norm(self.unitNodePos[self.fullRods[0][0]]-self.unitNodePos[self.fullRods[0][1]]) 
@@ -281,8 +292,15 @@ class tensegrity_design():
         root = fsolve(self.funcString, [sM/(self.param.sRho*24*sLPreSS), sLPreSS], args=(sM, self.param.sRho, sLPreSS, self.param.sE, self.param.sPreT))
         sA = root[0] # cross sectional area
         self.sL0 = root[1] # no-stress string length
-        
+
         self.kString = self.param.sE*sA/self.sL0
+        if self.param.dampingCase == 0:
+            #Notice that all strings are identical
+            b = self.strings[0][0]
+            e = self.strings[0][1]
+            eqMass = (self.massList[b] + self.massList[e])/2
+            self.dString =  2*np.sqrt(eqMass*self.kString)
+
         self.nodePos = compressedNodePos 
         self.propPos = compressedPropPos
         self.rLPreSS = rLPreSS
@@ -311,6 +329,9 @@ class tensegrity_design():
         [0.25*rLPreSS, propOffSet, 0.0]])
         compressedNodePos = np.vstack((rLPreSS*self.unitNodePos, compressedPropPos))
 
+        self.nodePos = compressedNodePos 
+        self.propPos = compressedPropPos
+
         self.rodLength0List = np.zeros(self.numRod) # list of rod length under zero stress
         self.kRodList = np.zeros(self.numRod) # list of stiffness of rods
         for i in range(self.numRod):
@@ -318,25 +339,37 @@ class tensegrity_design():
             e = self.rods[i][1]
             self.rodLength0List[i] = np.linalg.norm(compressedNodePos[b] - compressedNodePos[e])/(1-rPreStrain)
             self.kRodList[i] = self.param.rE*self.rA/self.rodLength0List[i]
+            if self.param.dampingCase == 0:
+                eqMass = (self.massList[b] + self.massList[e])/2
+                self.dRodList[i] =  2*np.sqrt(eqMass*self.kRodList[i])
 
         self.kJointList = np.zeros(len(self.joints))
         self.kJointStressList = np.zeros(len(self.joints))
         for i in range(len(self.joints)):
             [b,m,e] = self.joints[i]
-            jointLength = (np.linalg.norm(compressedNodePos[b] - compressedNodePos[m]) +  np.linalg.norm(compressedNodePos[m] - compressedNodePos[e]))/(1-rPreStrain)
-            jointI = (rOR**4-rIR**4)*np.pi/4  #Second moment of area, assume cross sectional area is a circle
+            lbm = np.linalg.norm(compressedNodePos[b] - compressedNodePos[m])
+            lme = np.linalg.norm(compressedNodePos[m] - compressedNodePos[e])
+            jointLength = lbm + lme
+            jointI = (self.rR**4)*np.pi/4  #Second moment of area 
             self.kJointList[i] = jointI*self.param.rE/(jointLength) # moment ~= k*theta, where theta is the bending angle. 
-            self.kJointStressList[i] = self.kJointList[i]*rOR/jointI # stress = Moment*r/I
+            self.kJointStressList[i] = self.kJointList[i]*self.rR/jointI # stress = Moment*r/I
+            if self.param.dampingCase == 0:
+                eqJ = (self.massList[b]*lbm**2 + self.massList[e]*lme**2)/2 #Equivalent mass moment of inertia
+                self.dJointList[i] = 2*np.sqrt(self.kJointList[i]*eqJ)
 
         # length ratio between string and rod in a self-stressed tensegrity
         gamma_l = np.linalg.norm(self.unitNodePos[self.strings[0][0]]-self.unitNodePos[self.strings[0][1]])/np.linalg.norm(self.unitNodePos[self.fullRods[0][0]]-self.unitNodePos[self.fullRods[0][1]]) 
-        sLPreSS = rLPreSS * gamma_l # length of string under pre-tension
+        self.sLPreSS = rLPreSS * gamma_l # length of string under pre-tension
         sPreStrain = (self.param.sPreT /sA)/self.param.sE
-        self.sL0 = sLPreSS/(1+sPreStrain)
+        self.sL0 = self.sLPreSS/(1+sPreStrain)
+        self.rLPreSS = rLPreSS
         
         self.kString = self.param.sE*sA/self.sL0
-        self.nodePos = compressedNodePos 
-        self.propPos = compressedPropPos
-        self.rLPreSS = rLPreSS
-        self.sLPreSS = sLPreSS
+        if self.param.dampingCase == 0:
+            #Notice that all strings are identical
+            b = self.strings[0][0]
+            e = self.strings[0][1]
+            eqMass = (self.massList[b] + self.massList[e])/2
+            self.dString =  2*np.sqrt(eqMass*self.kString)
+
         return 
