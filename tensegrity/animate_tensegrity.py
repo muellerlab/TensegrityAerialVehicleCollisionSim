@@ -70,7 +70,7 @@ class tensegrity_animator():
 
 
 
-    def animate_tensegrity(self, nodePosHist, show=False, save=False, name="TensegritySim"):
+    def animate_tensegrity(self, nodePosHist, show=False, save=False, fps = 24, name="TensegritySim"):
         """
         Creates the 3D figure and animates it with the input data.
         Args:
@@ -111,7 +111,7 @@ class tensegrity_animator():
 
         if save:
             Writer = animation.writers['ffmpeg']
-            writer = Writer(fps=30, metadata=dict(artist='Clark'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
+            writer = Writer(fps=fps, metadata=dict(artist='Clark'), bitrate=-1, extra_args=['-vcodec', 'libx264'])
             ani.save(name+'.mp4', writer=writer)
 
         if show:
