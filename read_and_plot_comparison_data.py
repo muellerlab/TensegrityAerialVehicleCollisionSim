@@ -20,7 +20,7 @@ import pickle
 import seaborn as sns
 sns.set_theme()
 
-folderName = "simResult/" # Name of the folder storing the data
+folderName = "simResultCritical/" # Name of the folder storing the data
 
 # Setup tensegrity info
 param = design_param()
@@ -57,6 +57,7 @@ tensegrity_ODE =tensegrity_ode(tensegrity)
 
 for angleIdx0 in range (sizeTheta0):
     for angleIdx1 in range (sizeTheta1):
+
         X[angleIdx0,angleIdx1] = theta0[angleIdx0]
         Y[angleIdx0,angleIdx1] = theta1[angleIdx1]
 
@@ -128,31 +129,36 @@ if plotType == "heatmap":
     vmax = max([np.max(propGuardMaxStress),np.max(tensegrityMaxStress)])
     levels = np.linspace(vmin, vmax, n+1)
 
-
-    fig1, axs = plt.subplots(nrows=1,ncols=2, figsize=(8,8),sharex='col', sharey='row')
-
+    
+    fig1, axs = plt.subplots(nrows=1,ncols=2, figsize=(8,8), sharex='col', sharey='row')
+  
     (ax1, ax2) = axs
     ax1.grid(False)
     ax2.grid(False)
     levels = np.linspace(vmin, vmax, n+1)
 
     cs1 = ax1.contourf(X, Y, propGuardMaxStress, cmap = 'plasma',levels = levels)
-    ax1.set_ylabel('Initial Pitch (rad)', fontsize=18)
-    ax1.set_xlabel('Initial Yaw (rad)', fontsize=18)
-    ax1.tick_params(labelsize=18)
-    ax1.set_title('Max Stress:Prop-guard', fontsize=18)
+    ax1.set_ylabel('Initial Pitch (rad)', fontsize=15)
+    ax1.set_xlabel('Initial Yaw (rad)', fontsize=15)
+    ax1.tick_params(labelsize=12)
+    ax1.yaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
+    ax1.xaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
+    ax1.set_title('Max Stress: Prop-guard', fontsize=15)
     ax1.set_aspect('equal')
 
     cs2 = ax2.contourf(X, Y, tensegrityMaxStress, cmap = 'plasma',levels = levels)
-    ax2.set_xlabel('Initial Yaw (rad)', fontsize=18)
-    ax2.set_ylabel('Initial Pitch (rad)', fontsize=18)
-    ax2.tick_params(labelsize=18)
-    ax2.set_title('Max Stress:Tensegrity', fontsize=18)
+    ax2.set_xlabel('Initial Yaw (rad)', fontsize=15)    
+    ax2.tick_params(labelsize=12)
+    ax2.yaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
+    ax2.xaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
+    ax2.set_title('Max Stress: Tensegrity', fontsize=15)
     ax2.set_aspect('equal')
 
     cbar = fig1.colorbar(cs2, ax=axs.ravel().tolist(),orientation='horizontal')
-    cbar.ax.tick_params(labelsize=15)
-
+    cbar.ax.tick_params(labelsize=12)
+    cbar.ax.xaxis.get_offset_text().set(size=12)
+    plt.locator_params(nbins=6)  
+    plt.savefig("comparisonResult.svg", format = 'svg', dpi=300)
     plt.show()
 
 elif plotType == "3d":
