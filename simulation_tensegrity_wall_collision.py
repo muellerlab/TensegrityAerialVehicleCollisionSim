@@ -19,7 +19,7 @@ Plot the information in the system and animate the process
 # Setup running functions
 drawDebugPlots = True
 createAnimation = True
-slowMotionRate = 128 # Animate at 1/slowMotionRate of real speed 
+slowMotionRate = 256 # Animate at (1/slowMotionRate) of real world speed 
 
 # Setup tensegrity
 param = design_param() #Load structure & material parameter 
@@ -44,7 +44,7 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.02 # [s] Simulation time
+tf = 0.03 # [s] Simulation time
 t_span = (t0,tf)
 t_eval = np.linspace(t0, tf, num = 300)
 dt=t_eval[1]-t_eval[0] # Calculate step time. This is related to frame rate of animation.  
