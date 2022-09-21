@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import scipy as sp
 from py3dmath.py3dmath import Rotation, Vec3
@@ -13,17 +14,16 @@ from tensegrity.design_tensegrity import tensegrity_design
 from tensegrity.tensegrity_ode import *
 from tensegrity.tensegrity_analysis import *
 from tensegrity.animate_tensegrity import *
-
-from scipy.integrate import odeint, solve_ivp
-import pickle
-
+from scipy.integrate import solve_ivp
 import seaborn as sns
+
 sns.set_theme()
-# Folder
+# Folder to store results
 folderName = "simResult/"
+
 # Setup wall 
 nWall = Vec3(1,0,0)
-Ew = 14e9 #[Pa], Young's modulus #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
+Ew = 14e9 #[Pa], Young's modulus for concrete #https://www.engineeringtoolbox.com/concrete-properties-d_1223.html 
 Aw = 0.1*0.1 #[m^2], effective area of compression
 Lw = 3 #[m] thickness of wall
 kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
@@ -34,7 +34,7 @@ t0 = 0 # [s]
 tf = 0.035 # [s] Max simulation time
 tF = tf # [s] Duration of collision
 t_span = (t0,tf)
-speed = 5 #[m/s]
+speed = 5 #[m/s] Initial speed 
 
 # Setup tensegrity
 param = design_param()
@@ -49,14 +49,14 @@ numRod_t = tensegrity.numRod
 strings_t = tensegrity.strings
 numString_t = tensegrity.numString
 massList_t = tensegrity.massList
-# Rotate the whole tensegrity 90 degrees to get to default orientation with two long rods pointing to wall
+
+# Rotate the whole tensegrity 90 degrees to get to default orientation: two long rods hosting the drone is perpendicular ot the wall
 tensegrityRot = Rotation.from_euler_YPR([-np.pi/2,0,0])
 defaultPos_t = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum_t):
     defaultPos_t[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
 # Setup prop_guard
-# Create the prop-guard design
 param = design_param()
 prop_guard = prop_guard_design(param)
 prop_guard.get_pos_from_propeller()
@@ -67,15 +67,14 @@ joints_p = prop_guard.joints
 rods_p = prop_guard.rods
 massList_p = prop_guard.massList
 
-# Rotate the whole tensegrity
+# Rotate the whole prop-guard to default orientation: two neighboring propellers are forming a line parallel to the wall.
 P_p = np.zeros(nodeNum_p*dim_p*2) # Setup simulated values
 propRot = Rotation.from_euler_YPR([np.pi/4,0,0])
 defaultPos_p = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum_p):
     defaultPos_p[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 
-sectionNum = 30 #50
-
+sectionNum = 30
 theta0 = np.linspace(0, np.pi/2, sectionNum)
 theta1 = np.linspace(0, np.pi/2, sectionNum)
 X, Y = np.meshgrid(theta0, theta1)
@@ -99,8 +98,9 @@ for angleIdx0 in range (sectionNum):
         initVel_p = np.zeros_like(initPos_p)
         for i in range(nodeNum_p):
             initPos_p[i] = (att*Vec3(defaultPos_p[i])).to_array().squeeze()
+        
         # Offset the vehicle so it is touching wall at the beginning of the simulation
-        offset_p = np.min(initPos_p[:,0]) - 1e-6 # Horizontally offset the vehicle so it just starts to contact the wall at the begining of simulation.
+        offset_p = np.min(initPos_p[:,0]) - 1e-6 
         for i in range(nodeNum_p):
             initPos_p[i] = initPos_p[i]- offset_p * np.array([1,0,0])
             initVel_p[i] = speed*Vec3(-1,0,0).to_array().squeeze()

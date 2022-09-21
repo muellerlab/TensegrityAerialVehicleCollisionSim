@@ -41,17 +41,17 @@ speed = 5 # speed of collision
 t0 = 0 # [s]
 tf = 0.02 # [s] Simulation time
 t_span = (t0,tf)
-t_eval = np.linspace(t0, tf, num = 300)
-dt=t_eval[1]-t_eval[0] # Calculate step time. This is related to frame rate of animation.  
+t_eval = np.linspace(t0, tf, num = 300) 
+dt = t_eval[1]-t_eval[0] # Calculate step time. This is related to frame rate of animation.  
 
 
-# Rotate the vehicle to default orientation: two propeller guards 
+# Rotate the vehicle to default orientation
 propRot = Rotation.from_euler_YPR([np.pi/4,0,0])
 defaultPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
     defaultPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 
-# Rotate the vehicle to desired attitude
+# Rotate the vehicle to initial attitude before collision
 att = Rotation.from_euler_YPR([0,-np.pi/4,0])
 initPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
@@ -189,7 +189,6 @@ if drawDebugPlots:
         fig4.axes[j].set_xlabel('Time [s]')
         fig4.axes[j].legend()
     fig4.axes[0].set_title('Node velocity')
-
 
     fig5 = plt.figure()
     n = 2 # num sub-plots

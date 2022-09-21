@@ -7,8 +7,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.animation as animation
 from tensegrity.design_tensegrity import tensegrity_design
 
-
-
 class tensegrity_animator():
     def __init__(self,tensegrity:tensegrity_design) -> None:
         self.tensegrity = tensegrity
@@ -72,8 +70,6 @@ class tensegrity_animator():
 
         return nodes, rod, string
 
-
-
     def animate_tensegrity(self, nodePosHist, show=False, save=False, fps = 24, name="TensegritySim"):
         """
         Creates the 3D figure and animates it with the input data.
@@ -117,7 +113,7 @@ class tensegrity_animator():
 
         if save:
             Writer = animation.writers['ffmpeg']
-            writer = Writer(fps=fps, metadata=dict(artist='Clark'), bitrate=6000, extra_args=['-vcodec', 'libx264'])
+            writer = Writer(fps=fps, metadata=dict(artist='user'), bitrate=6000, extra_args=['-vcodec', 'libx264'])
             ani.save(name+'.mp4', writer=writer)
 
         if show:

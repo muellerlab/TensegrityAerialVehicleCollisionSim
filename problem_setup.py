@@ -2,7 +2,6 @@
 With the same mass budget for tensegrity and propeller guard,
 compare the max stress in the system during the process of an external hit.
 """
-
 class design_param():
     def __init__(self):
         self.mStructure = 50/1000.0 #[kg] mass of the protection structure
@@ -23,15 +22,13 @@ class design_param():
         self.sD = 1e-3  #[m] diameter of string 
         self.gamma_m = 20 # ratio between mass of rod and string 
         self.sPreT = 20  # [N] string pre-tension force
+        
         """
         Two ways to design vehicles: 
-
         0: Given propeller size, assume that the propeller placement is symmetrical, find shortest rod length that can enclose it.
         Meanwhile, the prop guard protects the same vehicle put on tensegrtiy
-
         1: Given propeller size, find the shortest tensegrity that can hold it without the symmetrical assumption. 
-        Meanwhile, the prop guard is the smallest possible design to frame the propellers so they don't ht each other. 
-
+        Meanwhile, the prop guard is the smallest possible design to frame the propellers so they don't hit each other. 
         """
         self.designCase = 1
 
@@ -41,13 +38,8 @@ class design_param():
         1: specify damping for string, rod and joints
         """
         self.dampingCase = 0
-
-        if self.dampingCase ==1:
+        if self.dampingCase == 1:
             self.dString = 1000 #[N/(m/s)] 
             self.dRod = 1000 #[N/(m/s)]
             self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
-
-        # self.dString = 100 #[N/(m/s)] 
-        # self.dRod = 100 #[N/(m/s)]
-        # self.dJoint = 0.02 #[Nm/(rad/s)] Rotational damping constant
         return

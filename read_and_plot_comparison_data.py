@@ -19,19 +19,17 @@ import pickle
 
 import seaborn as sns
 sns.set_theme()
-
-folderName = "simResultCritical/" # Name of the folder storing the data
+plotType = "heatmap" # Choose plot type, "heatmap" or "3d"
+folderName = "simResult/" # Name of the folder storing the generated simulation data
 
 # Setup tensegrity info
 param = design_param()
 tensegrity = tensegrity_design(param)
 tensegrity.design_from_propeller()
-
 nodeNum_t = tensegrity.nodeNum
 dim_t = tensegrity.dim
 
-# Setup prop_guard
-# Create the prop-guard design
+# Setup prop guard info
 param = design_param()
 prop_guard = prop_guard_design(param)
 prop_guard.get_pos_from_propeller()
@@ -41,7 +39,7 @@ dim_p = prop_guard.dim
 joints_p = prop_guard.joints
 rods_p = prop_guard.rods
 
-sectionNum = 30 #30  #50
+sectionNum = 30 
 theta0 = np.linspace(0, np.pi/2, sectionNum)
 theta1 = np.linspace(0, np.pi/2, sectionNum)
 X = np.zeros((sectionNum,sectionNum))
@@ -62,9 +60,6 @@ for angleIdx0 in range (sizeTheta0):
         Y[angleIdx0,angleIdx1] = theta1[angleIdx1]
 
         print("TestID:",(angleIdx0,angleIdx1))
-        # Ps_p = np.genfromtxt(folderName+"prop_P"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-        # tHist_p = np.genfromtxt(folderName+"prop_t"+str(angleIdx0)+"_"+str(angleIdx1)+".csv", delimiter=',')
-
         file_p = open(folderName+"prop"+str(angleIdx0)+"_"+str(angleIdx1)+".pickle", 'rb')
         data_p = pickle.load(file_p)
         file_p.close()
@@ -119,9 +114,6 @@ print("meanTensegrity=", np.mean(tensegrityMaxStress))
 print("maxPropGuardStress=", np.max(propGuardMaxStress))
 print("maxTensegrity=", np.max(tensegrityMaxStress))
 
-
-plotType = "heatmap"
-
 if plotType == "heatmap":
     # Creating figure
     n = 600 # level of contours
@@ -169,11 +161,6 @@ elif plotType == "3d":
                         linewidth=0, antialiased=False)
     surf = ax.plot_surface(X, Y, tensegrityMaxStress, cmap='Blues',
                         linewidth=0, antialiased=False)
-
-    # np.savetxt("maxPropGuardStress20.csv", propGuardMaxStress, delimiter=",")
-    # np.savetxt("maxTensegrityStress20.csv", tensegrityMaxStress, delimiter=",")
-    # np.savetxt("X20.csv", X, delimiter=",")
-    # np.savetxt("Y20.csv", Y, delimiter=",")
 
     ax.grid(False)
     ax.set_xlabel('Initial Yaw (rad)',fontsize=12)
