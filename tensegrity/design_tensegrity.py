@@ -8,21 +8,21 @@ class tensegrity_design():
     def __init__(self,param:design_param) -> None:
         self.dim = 3
         self.numTensegrityNode = 12
-        self.numMassNode = 4
+        self.numMassNode = 6
         self.nodeNum = self.numTensegrityNode + self.numMassNode
 
         self.numString = 24 
         self.numTensegrityRod = 6 
-        self.numRod = self.numTensegrityRod + 4 #real rod in tensegrity + 4 rods due to additional connections of quadcopter mass nodes
+        self.numRod = self.numTensegrityRod + 6 #real rod in tensegrity + 4 rods due to additional connections of quadcopter mass nodes
 
         sM = param.mStructure/12 # mass of each structure node
-        qM = param.mQuad/4 # mass of each quad node
-        self.massList = np.array([sM for i in range(12)] + [qM for i in range(4)])
+        qM = param.mQuad/6 # mass of each quad node
+        self.massList = np.array([sM for i in range(12)] + [qM for i in range(6)])
         
         self.param = param
         self.propR = param.propR
 
-        # 12 tensegrity nodes + 4 mass nodes representing quadcopter weight
+        # 12 tensegrity nodes + 6 mass nodes representing quadcopter weight
         unitTensegrityNodes = np.array([
             # Tensegrity node
             [0.00, 0.50, 0.25], 
@@ -78,23 +78,27 @@ class tensegrity_design():
 
         # rod pieces connecting tensegrity nodes + quad mass nodes
         self.rods = [
-            [0, 1], 
-            [2, 3], 
-            [4, 12],
-            [12,13],
-            [13, 5],
-            [6, 14],
-            [14, 15],
+            [0, 12],
+            [12, 1],
+            [2, 13],
+            [13, 3],
+            [4, 14],
+            [14, 5],
+            [6, 15],
             [15, 7],
-            [8, 9], 
-            [10, 11]]
+            [8, 16],
+            [16, 9],
+            [10, 17],
+            [17, 11]]
 
         # joints created by two neighboring rods connected 
         self.joints = [
-            [4, 12, 13],
-            [12, 13, 5],
-            [6, 14, 15],
-            [14, 15, 7]]     
+            [0, 12, 1],
+            [2, 13, 3],
+            [4, 14, 5],
+            [6, 15, 7],
+            [8, 16, 9],
+            [10, 17, 11]]
 
         if self.param.dampingCase ==1:
             self.dRodList = self.param.dRod * np.ones(len(self.rods))
@@ -187,7 +191,7 @@ class tensegrity_design():
         n0 = self.unitNodePos[4,:]
         n1 = self.unitNodePos[0,:]
         n2 = self.unitNodePos[2,:]
-        rodLength = fsolve(self.propDistConstrSymmetric, np.array([0]), args=(n0, n1, n2, unitPropPos[0],self.propR))[0]
+        rodLength = fsolve(self.propDistConstrSymmetric, np.array([0]), args=(n0, n1, n2, unitPropPos[0]))[0]
         return rodLength
 
     """
@@ -226,17 +230,19 @@ class tensegrity_design():
 
         if self.param.designCase == 0:
             unitPropPos = np.array([
-            [-0.25, -0.25, 0.0],
-            [-0.25, 0.25, 0.0],
-            [0.25, -0.25, 0.0],
-            [0.25, 0.25, 0.0]])
+            [-0.3, 0, -0.25],
+            [0.3, 0, 0.25],
+            [-0.25, -0.3, 0.0],
+            [0.25, 0.3, 0.0],
+            [0, -0.25, -0.3],
+            [0, 0.25, 0.3]])
 
             rLPreSS = self.findMinimumRodLengthSymmetric(unitPropPos)
             rPreT = self.param.sPreT * stressRatio # [N] rod pre-compression force
 
             root = fsolve(self.funcRod, [rM/(self.param.rRho*6*rLPreSS), rLPreSS], args=(rM, self.param.rRho, rLPreSS, self.param.rE, rPreT))
             self.rA = root[0] # cross sectional area
-            rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
+            self.rR = np.sqrt(self.rA/np.pi) #[m] diameter of rod
             self.rL = root[1] # no-stress string length
             rPreStrain = (self.rL-rLPreSS)/self.rL
 

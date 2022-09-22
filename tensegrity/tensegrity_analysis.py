@@ -157,10 +157,10 @@ class tensegrity_analysis():
         quadNode = nodePos[12:,:]
         planeNodes = [[1,0,2],[3,1,0],[0,2,3],[2,3,1]] #Id of nodes that forms plane according to the right hand rule
 
-        minDistList = np.zeros(4)
+        minDistList = np.zeros(6)
         COM = Vec3(np.mean(nodePos,axis=0))
 
-        for propID in range(4):
+        for propID in range(6):
             planeNids = planeNodes[propID]
             n0 = Vec3(quadNode[planeNids[0]])
             n1 = Vec3(quadNode[planeNids[1]])

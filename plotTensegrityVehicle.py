@@ -50,7 +50,7 @@ class tensegrity_plotter():
         for n in self.design.nodePos:
             ax3d.plot(n[0], n[1], n[2],'o', markersize = 8, color=(43/255,255/255,255/255,0.8))
 
-        for i in range(4):
+        for i in range(6):
             p = self.design.propPos[i,:]
             q = p + np.array([0,0,1]) * 0.1 * self.design.rLPreSS
             ax3d.plot(p[0], p[1], p[2], 'bo')
@@ -66,10 +66,10 @@ ax3d.set_xlabel('x')
 ax3d.set_ylabel('y')
 ax3d.set_zlabel('z')
 
-ax3d.set_xlim3d([-0.2, 0.2])
-ax3d.set_ylim3d([-0.2, 0.2])
-ax3d.set_zlim3d([-0.2, 0.2])
-ax3d.set_box_aspect(aspect = (2,2,2))
+ax3d.set_xlim3d([-0.3, 0.3])
+ax3d.set_ylim3d([-0.3, 0.3])
+ax3d.set_zlim3d([-0.3, 0.3])
+ax3d.set_box_aspect(aspect = (3,3,3))
 ax3d.grid(False)
 
 param = design_param()

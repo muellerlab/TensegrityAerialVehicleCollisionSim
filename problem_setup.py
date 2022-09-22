@@ -5,12 +5,12 @@ compare the max stress in the system during the process of an external hit.
 
 class design_param():
     def __init__(self):
-        self.mStructure = 50/1000.0 #[kg] mass of the protection structure
-        self.mQuad = 250/1000.0 #[kg] mass of the quadcopter 
+        self.mStructure = 300/1000.0 #[kg] mass of the protection structure
+        self.mQuad = 900/1000.0 #[kg] mass of the quadcopter
 
-        propInch = 2.5 # 2.5in propeller diameter
+        propInch = 5 # 5in propeller diameter
         self.propR = propInch*(25.4)/(2*1000) #[m], radius of propeller
-        self.propNum = 4 # Vehicle with 4 propellers
+        self.propNum = 6 # Vehicle with 4 propellers
 
         # rod
         self.rRho = 2000 #[kg/m^3] density of carbon fiber 
@@ -33,7 +33,7 @@ class design_param():
         Meanwhile, the prop guard is the smallest possible design to frame the propellers so they don't ht each other. 
 
         """
-        self.designCase = 1
+        self.designCase = 0
 
         """
         Two ways to model damping in the system:

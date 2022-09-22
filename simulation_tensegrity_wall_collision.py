@@ -24,13 +24,14 @@ createAnimation = True
 param = design_param() #Load structure & material parameter 
 tensegrity = tensegrity_design(param)
 
-rL0 = 225/1000 #rod length
+rL0 = 375/1000 #rod length
 rOR = 4/1000 #outer diameter
 rIR = 3/1000 #inner diameter
 propOffSet = param.propR
 sA = np.pi*(5e-4)**2 # String area
-vPropOffset = 15/1000 #veritcal propeller offset 
-tensegrity.design_from_rod(rL0, rOR, propOffSet, sA, rIR)
+vPropOffset = 15/1000 #veritcal propeller offset
+tensegrity.design_from_propeller()
+#tensegrity.design_from_rod(rL0, rOR, propOffSet, sA, rIR)
 
 nodeNum = tensegrity.nodeNum
 dim = tensegrity.dim
