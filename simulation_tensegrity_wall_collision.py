@@ -18,7 +18,7 @@ Plot the information in the system and animate the process
 
 # Setup running functions
 drawDebugPlots = True
-createAnimation = True
+createAnimation = False
 slowMotionRate = 256 # Animate at (1/slowMotionRate) of real world speed 
 
 # Setup tensegrity
@@ -133,7 +133,7 @@ for i in range(stepCount):
     jointDampingMomentHist[i,:] = jointInfo_i[:,3]
     jointStressHist[i,:] = jointInfo_i[:,4]
     nodeMaxStressHist[i,:] = tensegrity_helper.compute_node_max_stress(rodStressHist[i], jointStressHist[i,:])
-    minDistPropToSurface[i,:] = tensegrity_helper.compute_min_prop_dist_to_face(nodePosHist[i],propOffSet)
+    #minDistPropToSurface[i,:] = tensegrity_helper.compute_min_prop_dist_to_face(nodePosHist[i],propOffSet)
     extForceHist[i,:] = tensegrity_helper.compute_wall_collision_force(nodePosHist[i],nWall, kWall, pWall)
 
 if drawDebugPlots:
@@ -229,7 +229,7 @@ if drawDebugPlots:
     n = 2 # num sub-plots
     fig6.add_subplot(n, 1, 1)
     for i in range(2, n + 1):
-        fig6.add_subplot(n, 1, i, sharex=fig5.axes[0])
+        fig6.add_subplot(n, 1, i, sharex=fig6.axes[0])
     for j in range(len(joints)):
         fig6.axes[0].plot(tHist, jointStressHist[:,j], '-', label='stressJoint'+str(j))
     for j in range(nodeNum):
@@ -243,18 +243,18 @@ if drawDebugPlots:
     fig6.axes[1].set_title('Max stress in node')
 
 
-    fig7 = plt.figure()
-    n = 1 # num sub-plots
-    fig7.add_subplot(n, 1, 1)
-    for i in range(2, n + 1):
-        fig7.add_subplot(n, 1, i, sharex=fig4.axes[0])
-
-    for j in range(param.propNum):
-        fig7.axes[0].plot(tHist, minDistPropToSurface[:,j], 'rgbc'[j]+'-', label='minDist'+str(j))
-    fig7.axes[0].set_ylabel('DistToSurface [m/s]')
-    fig7.axes[0].set_xlabel('Time [s]')
-    fig7.axes[0].legend()
-    fig7.axes[0].set_title('Propeller distance to surface')
+    # fig7 = plt.figure()
+    # n = 1 # num sub-plots
+    # fig7.add_subplot(n, 1, 1)
+    # for i in range(2, n + 1):
+    #     fig7.add_subplot(n, 1, i, sharex=fig7.axes[0])
+    #
+    # for j in range(param.propNum):
+    #     fig7.axes[0].plot(tHist, minDistPropToSurface[:,j], 'rgbc'[j]+'-', label='minDist'+str(j))
+    # fig7.axes[0].set_ylabel('DistToSurface [m/s]')
+    # fig7.axes[0].set_xlabel('Time [s]')
+    # fig7.axes[0].legend()
+    # fig7.axes[0].set_title('Propeller distance to surface')
 
     # Fig8, external collison force from wall
     fig8 = plt.figure()

@@ -35,7 +35,7 @@ class Arrow3D(FancyArrowPatch):
         return np.min(zs)
 
 class design_plotter():
-    def __init__(self, tensegrity:tensegrity_design, prop_guard:prop_guard_design) -> None:
+    def __init__(self, tensegrity:tensegrity_design, prop_guard:prop_guard_design = None) -> None:
         self.tensegrity = tensegrity
         self.prop_guard = prop_guard
         pass
@@ -81,7 +81,7 @@ class design_plotter():
         for n in nodePos:
             ax3d.plot(n[0], n[1], n[2],'o', markersize = 8, color=(43/255,255/255,255/255,0.8))
 
-        for i in range(4):
+        for i in range(6):
             p = propPos[i,:]
             q = p + np.array([0,0,1]) * 0.1 * self.tensegrity.rLPreSS
             ax3d.plot(p[0], p[1], p[2], 'bo')
@@ -129,14 +129,15 @@ param = design_param()
 tensegrity = tensegrity_design(param)
 tensegrity.design_from_propeller()
 
-prop_guard = prop_guard_design(param)
-prop_guard.get_pos_from_propeller()
-prop_guard.design()
+#prop_guard = prop_guard_design(param)
+#prop_guard.get_pos_from_propeller()
+#prop_guard.design()
 
-plotter = design_plotter(tensegrity,prop_guard)
+#plotter = design_plotter(tensegrity,prop_guard)
+plotter = design_plotter(tensegrity)
 
 plotter.draw_tensegrity(ax3d)
-plotter.draw_propguard(ax3d,-0.2,0.0,0)
+#plotter.draw_propguard(ax3d,-0.2,0.0,0)
 ax3d.view_init(-10, 15)
 plt.axis('off')
 ax3d.dist = 5

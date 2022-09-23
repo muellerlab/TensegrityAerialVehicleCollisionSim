@@ -11,7 +11,7 @@ class tensegrity_animator():
     def __init__(self,tensegrity:tensegrity_design) -> None:
         self.tensegrity = tensegrity
         self.nodeNum = tensegrity.nodeNum
-        self.propNum = 4
+        self.propNum = 6
         self.numRod = tensegrity.numRod
         self.numString = tensegrity.numString
         self.rods = tensegrity.rods
