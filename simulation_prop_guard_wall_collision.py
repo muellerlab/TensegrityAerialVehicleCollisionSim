@@ -1,3 +1,4 @@
+import math
 from platform import node
 import numpy as np
 import scipy as sp
@@ -20,6 +21,8 @@ Plot the information in the system and animate the process
 # Setup running functions
 drawDebugPlots = True
 createAnimation = True
+slowMotionRate = 128 # Animate at 1/slowMotionRate of real speed 
+
 
 # Create the prop-guard design
 param = design_param()
@@ -34,18 +37,21 @@ crossJoints = prop_guard.crossJoints
 massList = prop_guard.massList
 
 # Setup simulation experiment
-t0 = 0 # [s]
-tf = 0.05 # [s] Simulation time
-t_span = (t0,tf)
 speed = 5 # speed of collision
+t0 = 0 # [s]
+tf = 0.02 # [s] Simulation time
+t_span = (t0,tf)
+t_eval = np.linspace(t0, tf, num = 300) 
+dt = t_eval[1]-t_eval[0] # Calculate step time. This is related to frame rate of animation.  
 
-# Rotate the vehicle to default orientation: two propeller guards 
+
+# Rotate the vehicle to default orientation
 propRot = Rotation.from_euler_YPR([np.pi/4,0,0])
 defaultPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
     defaultPos[i] = (propRot*Vec3(prop_guard.nodePosList[i])).to_array().squeeze()
 
-# Rotate the vehicle to desired attitude
+# Rotate the vehicle to initial attitude before collision
 att = Rotation.from_euler_YPR([0,-np.pi/4,0])
 initPos = np.zeros_like(prop_guard.nodePosList)
 for i in range(nodeNum):
@@ -72,7 +78,7 @@ kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 
 print("Simulation type: wall collision")
 prop_guard_ODE =prop_guard_ode(prop_guard)
-sol = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), events=prop_guard_ODE.vel_check_simple)
+sol = solve_ivp(prop_guard_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), t_eval=t_eval)
 print("Finish Simulation")
 
 # Analyze the ODE result
@@ -184,7 +190,6 @@ if drawDebugPlots:
         fig4.axes[j].legend()
     fig4.axes[0].set_title('Node velocity')
 
-
     fig5 = plt.figure()
     n = 2 # num sub-plots
     fig5.add_subplot(n, 1, 1)
@@ -241,13 +246,8 @@ if drawDebugPlots:
         plt.show()
 
 if createAnimation:
-    frameSampleRate = 100 # use 1 frame for each 100 samples 
-    animateIteration = stepCount//frameSampleRate
-    nodePosAnimateData = np.zeros((animateIteration,nodeNum,dim))
-    for i in range(animateIteration):
-        nodePosAnimateData[i] = nodePosHist[i*frameSampleRate]
-
+    fps = math.floor((1/dt)/slowMotionRate)
     print("Creating Animation")
     animator = prop_guard_animator(prop_guard)
     animator.plot_wall(pWall,'x')
-    animator.animate_prop_guard(nodePosHist,True,False)
+    animator.animate_prop_guard(nodePosHist,True,True,fps)

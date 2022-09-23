@@ -57,7 +57,7 @@ class prop_guard_animator():
         return
 
 
-    def animate_prop_guard(self, nodePosHist, show = False, save=False, name = "prop_guard_sim"):
+    def animate_prop_guard(self, nodePosHist, show = False, save=False, fps = 24, name = "prop_guard_sim"):
         """
         Creates the 3D figure and animates it with the input data.
         Args:
@@ -95,7 +95,7 @@ class prop_guard_animator():
 
         if save:
             Writer = animation.writers['ffmpeg']
-            writer = Writer(fps=30, metadata=dict(artist='Clark'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
+            writer = Writer(fps=fps, metadata=dict(artist='user'), bitrate=6000, extra_args=['-vcodec', 'libx264'])
             ani.save(name + '.mp4', writer=writer)
 
         if show:

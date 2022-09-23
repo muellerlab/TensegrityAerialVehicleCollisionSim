@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from py3dmath.py3dmath import *
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ Plot the information in the system and animate the process
 # Setup running functions
 drawDebugPlots = True
 createAnimation = True
-
+slowMotionRate = 256 # Animate at (1/slowMotionRate) of real world speed 
 
 # Setup tensegrity
 param = design_param() #Load structure & material parameter 
@@ -44,9 +45,10 @@ massList = tensegrity.massList
 
 # Setup simulation experiment
 t0 = 0 # [s]
-tf = 0.02
-# [s] Simulation time
+tf = 0.03 # [s] Simulation time
 t_span = (t0,tf)
+t_eval = np.linspace(t0, tf, num = 300)
+dt=t_eval[1]-t_eval[0] # Calculate step time. This is related to frame rate of animation.  
 speed = 5 # speed of collision
 
 P0 = np.zeros(nodeNum*dim*2) # Setup simulated values
@@ -57,7 +59,7 @@ for i in range(nodeNum):
     defaultPos[i] = (tensegrityRot*Vec3(tensegrity.nodePos[i])).to_array().squeeze()
 
 # Rotate the vehicle to desired attitude
-att = Rotation.from_euler_YPR([0,0*-np.pi/4,0])
+att = Rotation.from_euler_YPR([0,-np.pi/4,0])
 initPos = np.zeros_like(tensegrity.nodePos)
 for i in range(nodeNum):
     initPos[i] = (att*Vec3(defaultPos[i])).to_array().squeeze()
@@ -84,7 +86,7 @@ kWall = Ew*Aw/Lw #[N/m] Stiffness of wall
 print("Simulation type: wall collision")
 print("Begin Simulation")
 tensegrity_ODE =tensegrity_ode(tensegrity)
-sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), events=tensegrity_ODE.vel_check_simple)
+sol = solve_ivp(tensegrity_ODE.ode_ivp_wall, t_span, P0, method='Radau',args=(nWall, kWall, pWall), t_eval=t_eval)
 print("Finish Simulation")
 # Analyze the ODE result
 print("Recording Results")
@@ -271,14 +273,8 @@ if drawDebugPlots:
         plt.show()
 
 if createAnimation:
-    # Animation
-    frameSampleRate = 10 #use 1 frame for each 1 sample 
-    animateIteration = stepCount//frameSampleRate
-    nodePosAnimateData = np.zeros((animateIteration,nodeNum,dim))
-    for i in range(animateIteration):
-        nodePosAnimateData[i] = nodePosHist[i*frameSampleRate]
-
+    fps = math.floor((1/dt)/slowMotionRate)
     print("Creating Animation")
     animator = tensegrity_animator(tensegrity)
     animator.plot_wall(pWall,'x')
-    animator.animate_tensegrity(nodePosHist,True,False)
+    animator.animate_tensegrity(nodePosHist,True,True,fps)

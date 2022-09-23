@@ -7,12 +7,11 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.animation as animation
 from tensegrity.design_tensegrity import tensegrity_design
 
-
-
 class tensegrity_animator():
     def __init__(self,tensegrity:tensegrity_design) -> None:
         self.tensegrity = tensegrity
         self.nodeNum = tensegrity.nodeNum
+        self.propNum = 4
         self.numRod = tensegrity.numRod
         self.numString = tensegrity.numString
         self.rods = tensegrity.rods
@@ -43,7 +42,7 @@ class tensegrity_animator():
         self.ax.add_collection3d(collection)
         return
 
-    def animate_scatters(self, iteration, nodePosHist, nodes, rod, cable):
+    def animate_scatters(self, iteration, nodePosHist, nodes, props, rod, string):
         """
         Update the data held by the scatter plot and therefore animates it.
         Args:
@@ -53,9 +52,12 @@ class tensegrity_animator():
         Returns:
             list: List of scatters (One per element) with new coordinates
         """
-        for i in range(self.nodeNum):
+        for i in range(self.nodeNum-self.propNum):
             nodes[i]._offsets3d = (nodePosHist[iteration,i,0:1], nodePosHist[iteration,i,1:2], nodePosHist[iteration,i,2:])
-        
+
+        for i in range(self.propNum):
+            props[i]._offsets3d = (nodePosHist[iteration,(self.nodeNum-self.propNum)+i,0:1], nodePosHist[iteration,(self.nodeNum-self.propNum)+i,1:2], nodePosHist[iteration,(self.nodeNum-self.propNum)+i,2:])
+
         for j in range(self.numRod):
             b,e = self.rods[j]
             rod[j].set_data([nodePosHist[iteration,b,0],nodePosHist[iteration,e,0]], [nodePosHist[iteration,b,1],nodePosHist[iteration,e,1]])
@@ -63,14 +65,12 @@ class tensegrity_animator():
 
         for k in range(self.numString):
             b,e = self.strings[k]
-            cable[k].set_data([nodePosHist[iteration,b,0],nodePosHist[iteration,e,0]], [nodePosHist[iteration,b,1],nodePosHist[iteration,e,1]])
-            cable[k].set_3d_properties([nodePosHist[iteration,b,2],nodePosHist[iteration,e,2]])
+            string[k].set_data([nodePosHist[iteration,b,0],nodePosHist[iteration,e,0]], [nodePosHist[iteration,b,1],nodePosHist[iteration,e,1]])
+            string[k].set_3d_properties([nodePosHist[iteration,b,2],nodePosHist[iteration,e,2]])
 
-        return nodes, rod, cable
+        return nodes, rod, string
 
-
-
-    def animate_tensegrity(self, nodePosHist, show=False, save=False, name="TensegritySim"):
+    def animate_tensegrity(self, nodePosHist, show=False, save=False, fps = 24, name="TensegritySim"):
         """
         Creates the 3D figure and animates it with the input data.
         Args:
@@ -79,15 +79,17 @@ class tensegrity_animator():
         """
 
         # Initialize scatters
-        nodes = [self.ax.scatter(nodePosHist[0,i,0:1], nodePosHist[0,i,1:2], nodePosHist[0,i,2:]) for i in range(self.nodeNum)]
+        nodes = [self.ax.scatter(nodePosHist[0,i,0:1], nodePosHist[0,i,1:2], nodePosHist[0,i,2:], color = (43/255,255/255,255/255,0.8)) for i in range(self.nodeNum-self.propNum)]
+        props = [self.ax.scatter(nodePosHist[0,(self.nodeNum-self.propNum)+i,0:1], nodePosHist[0,(self.nodeNum-self.propNum)+i,1:2], nodePosHist[0,(self.nodeNum-self.propNum)+i,2:], color=(247/255,147/255,29/255,0.9)) for i in range(self.propNum)]
+
 
         rod = []
         for b,e in self.rods:
-            rod.append(self.ax.plot([nodePosHist[0,b,0],nodePosHist[0,e,0]], [nodePosHist[0,b,1],nodePosHist[0,e,1]], [nodePosHist[0,b,2],nodePosHist[0,e,2]], 'b-')[0])
+            rod.append(self.ax.plot([nodePosHist[0,b,0],nodePosHist[0,e,0]], [nodePosHist[0,b,1],nodePosHist[0,e,1]], [nodePosHist[0,b,2],nodePosHist[0,e,2]], '-', linewidth=3, color=(3/255,107/255,251/255,0.8))[0])
 
-        cable = [] 
+        string = [] 
         for b,e in self.strings:
-            cable.append(self.ax.plot([nodePosHist[0,b,0],nodePosHist[0,e,0]], [nodePosHist[0,b,1],nodePosHist[0,e,1]], [nodePosHist[0,b,2],nodePosHist[0,e,2]], 'r-')[0])
+            string.append(self.ax.plot([nodePosHist[0,b,0],nodePosHist[0,e,0]], [nodePosHist[0,b,1],nodePosHist[0,e,1]], [nodePosHist[0,b,2],nodePosHist[0,e,2]], '--', linewidth=2, color=(251/255,17/255,19/255,0.8))[0])
 
         # Number of iterations
         iterations = nodePosHist.shape[0]
@@ -104,14 +106,14 @@ class tensegrity_animator():
 
         self.ax.set_title('Tensegrity')
         # Provide starting angle for the view.
-        self.ax.view_init(20, 60)
+        self.ax.view_init(5, 85)
 
-        ani = animation.FuncAnimation(self.fig, self.animate_scatters, iterations, fargs=(nodePosHist, nodes, rod, cable),
+        ani = animation.FuncAnimation(self.fig, self.animate_scatters, iterations, fargs=(nodePosHist, nodes, props, rod, string),
                                         interval=10, blit=False, repeat=True)
 
         if save:
             Writer = animation.writers['ffmpeg']
-            writer = Writer(fps=30, metadata=dict(artist='Clark'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
+            writer = Writer(fps=fps, metadata=dict(artist='user'), bitrate=6000, extra_args=['-vcodec', 'libx264'])
             ani.save(name+'.mp4', writer=writer)
 
         if show:
