@@ -1,0 +1,2 @@
+The compiled Monte Carlo scaling test result used for papaer. 
+"x10_a" means the tensegrity and prop_guard design is scaled with a factor of 10^a. 

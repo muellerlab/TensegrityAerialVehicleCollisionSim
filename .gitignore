@@ -1,0 +1,9 @@
+*.pyc
+*.csv
+*.png
+*.svg
+*.mp4
+simResultMC/
+deprecated/
+AnalysisResult/
+MonteCarloResult/
