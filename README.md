@@ -2,7 +2,9 @@
 
 This repository contains source code implementing dynamics simulation of a tensegrity aerial vehicle colliding with a flat obstacle, such as a concrete wall. The code can be used to verify the design of icosahedron protection shells protecting aerial vehicles in the form of quadcopters. 
 
-The detail of the simulation is described in the paper "Design and control of a collision-resilient aerial vehicle with an icosahedron tensegrity structure" submitted to  IEEE/ASME Transactions on Mechatronics (TMECH). A manuscript draft can be accessed [here](https://hiperlab.berkeley.edu/wp-content/uploads/2022/11/Design-and-control-of-a-collision-resilient-aerial-vehicle-with-an-icosahedron-tensegrity-structure.pdf). An accompanying video can be accessed [here](https://youtu.be/wPsXKjY5a4Y).
+The detail of the simulation is described in the paper "Design and control of a collision-resilient aerial vehicle with an icosahedron tensegrity structure" submitted to  IEEE/ASME Transactions on Mechatronics (TMECH). A manuscript draft can be accessed [here](https://hiperlab.berkeley.edu/wp-content/uploads/2022/11/Design-and-control-of-a-collision-resilient-aerial-vehicle-with-an-icosahedron-tensegrity-structure.pdf). 
+
+
 
 This work is evolved from our previous [IROS 2020 paper](https://ieeexplore.ieee.org/document/9341236).
 
@@ -74,6 +76,11 @@ You can also adjust initial orientation and speed of the tesegrity in the wall c
 ```
 simulation_tensegrity_wall_collision.py
 ```
+
+
+## Accompanying video
+[![Watch the video](https://user-images.githubusercontent.com/39609430/204390127-ffbfe43a-ce01-471d-992a-9bfe98cb9b22.png)](https://youtu.be/wPsXKjY5a4Y)
+
 
 ## Acknowledgement
 Co-authors of the paper: Xiangyu Wu, Ryan Dimick, Mark. W. Mueller
