@@ -79,7 +79,7 @@ simulation_tensegrity_wall_collision.py
 
 
 ## Accompanying video
-[![Watch the video](https://user-images.githubusercontent.com/39609430/204390127-ffbfe43a-ce01-471d-992a-9bfe98cb9b22.png)](https://youtu.be/wPsXKjY5a4Y)
+[![Watch the video](https://user-images.githubusercontent.com/39609430/204390127-ffbfe43a-ce01-471d-992a-9bfe98cb9b22.png)](https://youtu.be/XsLVRd2nMd0)
 
 
 ## Acknowledgement
