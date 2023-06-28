@@ -2,7 +2,7 @@
 
 This repository contains source code implementing dynamics simulation of a tensegrity aerial vehicle colliding with a flat obstacle, such as a concrete wall. The code can be used to verify the design of icosahedron protection shells protecting aerial vehicles in the form of quadcopters. 
 
-The detail of the simulation is described in the paper "Design and control of a collision-resilient aerial vehicle with an icosahedron tensegrity structure" submitted to  IEEE/ASME Transactions on Mechatronics (TMECH). A manuscript draft can be accessed [here](https://hiperlab.berkeley.edu/wp-content/uploads/2022/11/Design-and-control-of-a-collision-resilient-aerial-vehicle-with-an-icosahedron-tensegrity-structure.pdf). 
+The detail of the simulation is described in the paper "Design and control of a collision-resilient aerial vehicle with an icosahedron tensegrity structure" submitted to  IEEE/ASME Transactions on Mechatronics (TMECH). A manuscript draft can be accessed [here](https://hiperlab.berkeley.edu/wp-content/uploads/2023/06/TensegrityAerialVehicle.pdf)). 
 
 
 
